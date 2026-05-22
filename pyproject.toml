@@ -1,0 +1,27 @@
+[project]
+name = "ibx-cli"
+version = "0.1.0"
+description = "CLI toolset for managing Infoblox NIOS DNS/DHCP data via WAPI"
+requires-python = ">=3.9"
+dependencies = [
+    "click>=8.1.0",
+    "rich>=13.0.0",
+    "pyyaml>=6.0",
+    "infoblox-client>=0.6.2",
+]
+
+[project.scripts]
+ibx = "ibxcli.cli.main:cli"
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov",
+    "responses>=0.25.0",
+    "ruff>=0.4.0",
+    "mypy>=1.10",
+]
