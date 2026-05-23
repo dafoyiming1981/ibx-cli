@@ -9,14 +9,14 @@
 #   - python3.12 installed
 #   - Internal pip source accessible
 #
-# Installs to: ~/.local/ibxcli/ (no root required)
-# Entry point:  ~/.local/bin/ibx
+# Installs to: /opt/ibx-cli/ (avoids noexec on home directory)
+# Entry point:  /opt/ibx-cli/bin/ibx (via alias or symlink)
 
 set -euo pipefail
 
-INSTALL_DIR="$HOME/.local/ibxcli"
+INSTALL_DIR="/opt/ibx-cli"
 SRC_DIR="$INSTALL_DIR/src/ibxcli"
-BIN_DIR="$HOME/.local/bin"
+BIN_DIR="$INSTALL_DIR/bin"
 
 echo "=== ibx-cli installer ==="
 echo "Install directory: $INSTALL_DIR"
@@ -1571,6 +1571,8 @@ echo "=== Installation complete ==="
 echo ""
 echo "Add to your PATH (add to ~/.bashrc):"
 echo "  export PATH=\"$BIN_DIR:\$PATH\""
+echo "  # OR add an alias:"
+echo "  alias ibx=\"$BIN_DIR/ibx\""
 echo ""
 echo "Then run:"
 echo "  ibx --help"
