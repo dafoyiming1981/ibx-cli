@@ -14,9 +14,9 @@
 
 set -euo pipefail
 
-INSTALL_DIR="$HOME/.local/ibxcli"
+INSTALL_DIR="${IBX_INSTALL_DIR:-$HOME/.local/ibxcli}"
 SRC_DIR="$INSTALL_DIR/src/ibxcli"
-BIN_DIR="$HOME/.local/bin"
+BIN_DIR="$INSTALL_DIR/bin"
 
 echo "=== ibx-cli installer ==="
 echo "Install directory: $INSTALL_DIR"
