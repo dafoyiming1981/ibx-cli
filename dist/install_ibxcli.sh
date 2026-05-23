@@ -389,14 +389,16 @@ class QueryExecutor:
     def execute(self, params: QueryParams) -> QueryResult:
         """Execute the query and apply post-processing."""
         search = dict(params.search_filters)
-        if params.sort_by:
-            search["_sort"] = params.sort_by
 
         records = self._client.get(
             obj_type=params.obj_type,
             search_fields=search,
             return_fields=params.return_fields or None,
         )
+
+        # Client-side sorting (avoids WAPI _sort compatibility issues)
+        if params.sort_by:
+            records = sorted(records, key=lambda r: r.get(params.sort_by, ""))
 
         if params.limit and len(records) > params.limit:
             records = records[:params.limit]
