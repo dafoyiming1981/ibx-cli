@@ -23,6 +23,28 @@ echo "Install directory: $INSTALL_DIR"
 echo ""
 
 # --- Step 1: Install Python dependencies ---
+echo "[1/3] Setting up pip for python3.12..."
+
+# System pip may point to python3.6; ensure python3.12 has its own pip
+if python3.12 -m pip --version &>/dev/null; then
+    echo "  python3.12 -m pip already available."
+else
+    echo "  pip not found for python3.12, bootstrapping with ensurepip..."
+    python3.12 -m ensurepip --default-pip 2>/dev/null || {
+        echo "  ensurepip failed, trying get-pip.py bootstrap..."
+        TMPPIP=$(mktemp /tmp/get-pip-XXXXXX.py)
+        # Inline minimal get-pip (only needs setuptools + wheel + pip)
+        curl -sL https://bootstrap.pypa.io/get-pip.py -o "$TMPPIP" 2>/dev/null && {
+            python3.12 "$TMPPIP" --no-warn-script-location
+            rm -f "$TMPPIP"
+        } || {
+            echo "  ERROR: Cannot bootstrap pip for python3.12."
+            echo "  Please ask your admin to install pip for python3.12 or provide get-pip.py locally."
+            exit 1
+        }
+    }
+fi
+
 echo "[1/3] Installing Python dependencies..."
 python3.12 -m pip install click rich pyyaml infoblox-client \
   --index-url http://your-internal-pip-mirror/simple \
