@@ -67,6 +67,9 @@ PYEOF
 # ===== ibxcli/__main__.py =====
 cat > "$SRC_DIR/__main__.py" << 'PYEOF'
 from ibxcli.cli.main import cli
+
+if __name__ == "__main__":
+    cli()
 PYEOF
 
 # ===== ibxcli/utils/__init__.py =====
