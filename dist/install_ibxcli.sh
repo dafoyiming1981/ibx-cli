@@ -970,7 +970,7 @@ def output_options(f):
     return f
 
 
-def execute_and_render(ctx, obj_type, search_filters):
+def execute_and_render(ctx, obj_type, search_filters, **kwargs):
     """Common pattern: build query, execute, render results."""
     _ensure_client(ctx)
     from ibxcli.objects import HANDLERS
@@ -1214,11 +1214,11 @@ def dns():
 @click.option("--fqdn", help="Zone FQDN filter (use --regex for pattern match)")
 @click.option("--regex", is_flag=True, help="Treat fqdn as regex pattern")
 @click.pass_context
-def zones(ctx, view, fqdn, regex):
+def zones(ctx, view, fqdn, regex, **kwargs):
     """List authoritative DNS zones."""
     handler = HANDLERS["zone:auth"]
     filters = handler.build_search_filters(view=view, fqdn=fqdn, regex=regex)
-    execute_and_render(ctx, "zone:auth", filters)
+    execute_and_render(ctx, "zone:auth", filters, **kwargs)
 
 
 @dns.command()
@@ -1229,11 +1229,11 @@ def zones(ctx, view, fqdn, regex):
 @click.option("--view", help="DNS view filter")
 @click.option("--regex", is_flag=True, help="Treat name as regex pattern")
 @click.pass_context
-def a(ctx, name, ipv4addr, zone, view, regex):
+def a(ctx, name, ipv4addr, zone, view, regex, **kwargs):
     """List DNS A records."""
     handler = HANDLERS["record:a"]
     filters = handler.build_search_filters(name=name, ipv4addr=ipv4addr, zone=zone, view=view, regex=regex)
-    execute_and_render(ctx, "record:a", filters)
+    execute_and_render(ctx, "record:a", filters, **kwargs)
 
 
 @dns.command()
@@ -1244,11 +1244,11 @@ def a(ctx, name, ipv4addr, zone, view, regex):
 @click.option("--view", help="DNS view filter")
 @click.option("--regex", is_flag=True, help="Treat name as regex pattern")
 @click.pass_context
-def aaaa(ctx, name, ipv6addr, zone, view, regex):
+def aaaa(ctx, name, ipv6addr, zone, view, regex, **kwargs):
     """List DNS AAAA records."""
     handler = HANDLERS["record:aaaa"]
     filters = handler.build_search_filters(name=name, ipv6addr=ipv6addr, zone=zone, view=view, regex=regex)
-    execute_and_render(ctx, "record:aaaa", filters)
+    execute_and_render(ctx, "record:aaaa", filters, **kwargs)
 
 
 @dns.command()
@@ -1259,11 +1259,11 @@ def aaaa(ctx, name, ipv6addr, zone, view, regex):
 @click.option("--view", help="DNS view filter")
 @click.option("--regex", is_flag=True, help="Treat name as regex pattern")
 @click.pass_context
-def cname(ctx, name, canonical, zone, view, regex):
+def cname(ctx, name, canonical, zone, view, regex, **kwargs):
     """List DNS CNAME records."""
     handler = HANDLERS["record:cname"]
     filters = handler.build_search_filters(name=name, canonical=canonical, zone=zone, view=view, regex=regex)
-    execute_and_render(ctx, "record:cname", filters)
+    execute_and_render(ctx, "record:cname", filters, **kwargs)
 
 
 @dns.command()
@@ -1273,11 +1273,11 @@ def cname(ctx, name, canonical, zone, view, regex):
 @click.option("--view", help="DNS view filter")
 @click.option("--regex", is_flag=True, help="Treat name as regex pattern")
 @click.pass_context
-def mx(ctx, name, zone, view, regex):
+def mx(ctx, name, zone, view, regex, **kwargs):
     """List DNS MX records."""
     handler = HANDLERS["record:mx"]
     filters = handler.build_search_filters(name=name, zone=zone, view=view, regex=regex)
-    execute_and_render(ctx, "record:mx", filters)
+    execute_and_render(ctx, "record:mx", filters, **kwargs)
 
 
 @dns.command()
@@ -1287,11 +1287,11 @@ def mx(ctx, name, zone, view, regex):
 @click.option("--view", help="DNS view filter")
 @click.option("--regex", is_flag=True, help="Treat name as regex pattern")
 @click.pass_context
-def ns(ctx, name, zone, view, regex):
+def ns(ctx, name, zone, view, regex, **kwargs):
     """List DNS NS records."""
     handler = HANDLERS["record:ns"]
     filters = handler.build_search_filters(name=name, zone=zone, view=view, regex=regex)
-    execute_and_render(ctx, "record:ns", filters)
+    execute_and_render(ctx, "record:ns", filters, **kwargs)
 
 
 @dns.command()
@@ -1301,11 +1301,11 @@ def ns(ctx, name, zone, view, regex):
 @click.option("--view", help="DNS view filter")
 @click.option("--regex", is_flag=True, help="Treat name as regex pattern")
 @click.pass_context
-def txt(ctx, name, zone, view, regex):
+def txt(ctx, name, zone, view, regex, **kwargs):
     """List DNS TXT records."""
     handler = HANDLERS["record:txt"]
     filters = handler.build_search_filters(name=name, zone=zone, view=view, regex=regex)
-    execute_and_render(ctx, "record:txt", filters)
+    execute_and_render(ctx, "record:txt", filters, **kwargs)
 
 
 @dns.command()
@@ -1317,11 +1317,11 @@ def txt(ctx, name, zone, view, regex):
 @click.option("--view", help="DNS view filter")
 @click.option("--regex", is_flag=True, help="Treat name as regex pattern")
 @click.pass_context
-def ptr(ctx, name, ipv4addr, ipv6addr, zone, view, regex):
+def ptr(ctx, name, ipv4addr, ipv6addr, zone, view, regex, **kwargs):
     """List DNS PTR records."""
     handler = HANDLERS["record:ptr"]
     filters = handler.build_search_filters(name=name, ipv4addr=ipv4addr, ipv6addr=ipv6addr, zone=zone, view=view, regex=regex)
-    execute_and_render(ctx, "record:ptr", filters)
+    execute_and_render(ctx, "record:ptr", filters, **kwargs)
 
 
 @dns.command()
@@ -1332,11 +1332,11 @@ def ptr(ctx, name, ipv4addr, ipv6addr, zone, view, regex):
 @click.option("--view", help="DNS view filter")
 @click.option("--regex", is_flag=True, help="Treat name as regex pattern")
 @click.pass_context
-def hosts(ctx, name, ipv4addr, mac, view, regex):
+def hosts(ctx, name, ipv4addr, mac, view, regex, **kwargs):
     """List DNS host records."""
     handler = HANDLERS["record:host"]
     filters = handler.build_search_filters(name=name, ipv4addr=ipv4addr, mac=mac, view=view, regex=regex)
-    execute_and_render(ctx, "record:host", filters)
+    execute_and_render(ctx, "record:host", filters, **kwargs)
 
 
 @dns.command("all-records")
@@ -1345,11 +1345,11 @@ def hosts(ctx, name, ipv4addr, mac, view, regex):
 @click.option("--view", help="DNS view filter")
 @click.option("--type", "record_type", help="Filter by record type (A, CNAME, etc.)")
 @click.pass_context
-def all_records(ctx, zone, view, record_type):
+def all_records(ctx, zone, view, record_type, **kwargs):
     """List all DNS records in a zone."""
     handler = HANDLERS["allrecords"]
     filters = handler.build_search_filters(zone=zone, view=view, type=record_type)
-    execute_and_render(ctx, "allrecords", filters)
+    execute_and_render(ctx, "allrecords", filters, **kwargs)
 PYEOF
 
 # ===== ibxcli/cli/dhcp.py =====
@@ -1373,11 +1373,11 @@ def dhcp():
 @click.option("--network", help="CIDR network filter (e.g., 10.0.0.0/24)")
 @click.option("--network-view", help="Network view filter")
 @click.pass_context
-def networks(ctx, network, network_view):
+def networks(ctx, network, network_view, **kwargs):
     """List IPv4 networks."""
     handler = HANDLERS["network"]
     filters = handler.build_search_filters(network=network, network_view=network_view)
-    execute_and_render(ctx, "network", filters)
+    execute_and_render(ctx, "network", filters, **kwargs)
 
 
 @dhcp.command()
@@ -1385,11 +1385,11 @@ def networks(ctx, network, network_view):
 @click.option("--network", help="CIDR IPv6 network filter")
 @click.option("--network-view", help="Network view filter")
 @click.pass_context
-def ipv6_networks(ctx, network, network_view):
+def ipv6_networks(ctx, network, network_view, **kwargs):
     """List IPv6 networks."""
     handler = HANDLERS["ipv6network"]
     filters = handler.build_search_filters(network=network, network_view=network_view)
-    execute_and_render(ctx, "ipv6network", filters)
+    execute_and_render(ctx, "ipv6network", filters, **kwargs)
 
 
 @dhcp.command()
@@ -1397,11 +1397,11 @@ def ipv6_networks(ctx, network, network_view):
 @click.option("--network", help="CIDR container network filter")
 @click.option("--network-view", help="Network view filter")
 @click.pass_context
-def containers(ctx, network, network_view):
+def containers(ctx, network, network_view, **kwargs):
     """List network containers."""
     handler = HANDLERS["networkcontainer"]
     filters = handler.build_search_filters(network=network, network_view=network_view)
-    execute_and_render(ctx, "networkcontainer", filters)
+    execute_and_render(ctx, "networkcontainer", filters, **kwargs)
 
 
 @dhcp.command()
@@ -1410,11 +1410,11 @@ def containers(ctx, network, network_view):
 @click.option("--mac", help="MAC address filter")
 @click.option("--network-view", help="Network view filter")
 @click.pass_context
-def fixed_addresses(ctx, ipv4addr, mac, network_view):
+def fixed_addresses(ctx, ipv4addr, mac, network_view, **kwargs):
     """List DHCP fixed addresses (reservations)."""
     handler = HANDLERS["fixedaddress"]
     filters = handler.build_search_filters(ipv4addr=ipv4addr, mac=mac, network_view=network_view)
-    execute_and_render(ctx, "fixedaddress", filters)
+    execute_and_render(ctx, "fixedaddress", filters, **kwargs)
 
 
 @dhcp.command()
@@ -1424,11 +1424,11 @@ def fixed_addresses(ctx, ipv4addr, mac, network_view):
 @click.option("--network", help="Network filter")
 @click.option("--state", type=click.Choice(["active", "expired"]), help="Lease state filter")
 @click.pass_context
-def leases(ctx, address, mac, network, state):
+def leases(ctx, address, mac, network, state, **kwargs):
     """List DHCP leases."""
     handler = HANDLERS["lease"]
     filters = handler.build_search_filters(address=address, mac=mac, network=network, state=state)
-    execute_and_render(ctx, "lease", filters)
+    execute_and_render(ctx, "lease", filters, **kwargs)
 
 
 @dhcp.command()
@@ -1438,11 +1438,11 @@ def leases(ctx, address, mac, network, state):
 @click.option("--mac", help="MAC address filter")
 @click.option("--name", help="Associated name filter")
 @click.pass_context
-def ipv4_addresses(ctx, network, status, mac, name):
+def ipv4_addresses(ctx, network, status, mac, name, **kwargs):
     """List IPv4 address usage status."""
     handler = HANDLERS["ipv4address"]
     filters = handler.build_search_filters(network=network, status=status, mac=mac, name=name)
-    execute_and_render(ctx, "ipv4address", filters)
+    execute_and_render(ctx, "ipv4address", filters, **kwargs)
 PYEOF
 
 # ===== ibxcli/cli/infra.py =====
@@ -1464,11 +1464,11 @@ def infra():
 @infra.command()
 @output_options
 @click.pass_context
-def grid(ctx):
+def grid(ctx, **kwargs):
     """Show grid properties."""
     handler = HANDLERS["grid"]
     filters = handler.build_search_filters()
-    execute_and_render(ctx, "grid", filters)
+    execute_and_render(ctx, "grid", filters, **kwargs)
 
 
 @infra.command()
@@ -1476,11 +1476,11 @@ def grid(ctx):
 @click.option("--host-name", help="Member hostname filter")
 @click.option("--service-state", help="Service state filter")
 @click.pass_context
-def members(ctx, host_name, service_state):
+def members(ctx, host_name, service_state, **kwargs):
     """List grid members."""
     handler = HANDLERS["member"]
     filters = handler.build_search_filters(host_name=host_name, service_state=service_state)
-    execute_and_render(ctx, "member", filters)
+    execute_and_render(ctx, "member", filters, **kwargs)
 
 
 @infra.command()
@@ -1488,22 +1488,22 @@ def members(ctx, host_name, service_state):
 @click.option("--name", help="DNS view name filter")
 @click.option("--network-view", help="Associated network view filter")
 @click.pass_context
-def views(ctx, name, network_view):
+def views(ctx, name, network_view, **kwargs):
     """List DNS views."""
     handler = HANDLERS["view"]
     filters = handler.build_search_filters(name=name, network_view=network_view)
-    execute_and_render(ctx, "view", filters)
+    execute_and_render(ctx, "view", filters, **kwargs)
 
 
 @infra.command()
 @output_options
 @click.option("--name", help="Network view name filter")
 @click.pass_context
-def network_views(ctx, name):
+def network_views(ctx, name, **kwargs):
     """List network views."""
     handler = HANDLERS["networkview"]
     filters = handler.build_search_filters(name=name)
-    execute_and_render(ctx, "networkview", filters)
+    execute_and_render(ctx, "networkview", filters, **kwargs)
 PYEOF
 
 # ===== ibxcli/cli/search.py =====
