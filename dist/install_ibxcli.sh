@@ -304,8 +304,8 @@ class IbxClient:
         """Fetch objects from WAPI with automatic pagination."""
         kwargs: dict[str, Any] = {}
         if return_fields:
-            kwargs["_return_fields"] = ",".join(return_fields)
-        kwargs["_max_results"] = max_results or self._max_results
+            kwargs["return_fields"] = return_fields
+        kwargs["max_results"] = max_results or self._max_results
 
         try:
             result = self._connector.get_object(
