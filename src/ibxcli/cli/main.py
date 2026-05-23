@@ -27,7 +27,7 @@ def output_options(f):
     return f
 
 
-def execute_and_render(ctx, obj_type, search_filters):
+def execute_and_render(ctx, obj_type, search_filters, **kwargs):
     """Common pattern: build query, execute, render results."""
     _ensure_client(ctx)
     from ibxcli.objects import HANDLERS
