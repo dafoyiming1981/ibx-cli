@@ -11,7 +11,7 @@ from rich.console import Console
 from ibxcli import __version__
 from ibxcli.core.client import IbxClient
 from ibxcli.core.config import DEFAULT_CONFIG_PATH, load_config
-from ibxcli.core.exceptions import IbxAuthError, IbxConfigError, IbxConnectionError, IbxError, IbxWapiError
+from ibxcli.core.exceptions import IbxAuthError, IbxConfigError, IbxConnectionError, IbxWapiError
 from ibxcli.core.query import QueryExecutor
 from ibxcli.formatters.base import get_formatter
 

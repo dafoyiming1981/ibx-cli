@@ -1,0 +1,1580 @@
+#!/usr/bin/env bash
+# install_ibxcli.sh — Zero-download installer for ibx-cli
+#
+# Usage:
+#   1. Copy/paste this entire script to the target server
+#   2. Run: bash install_ibxcli.sh
+#
+# Prerequisites:
+#   - python3.12 installed
+#   - Internal pip source accessible
+#
+# Installs to: ~/.local/ibxcli/ (no root required)
+# Entry point:  ~/.local/bin/ibx
+
+set -euo pipefail
+
+INSTALL_DIR="$HOME/.local/ibxcli"
+SRC_DIR="$INSTALL_DIR/src/ibxcli"
+BIN_DIR="$HOME/.local/bin"
+
+echo "=== ibx-cli installer ==="
+echo "Install directory: $INSTALL_DIR"
+echo ""
+
+# --- Step 1: Install Python dependencies ---
+echo "[1/3] Installing Python dependencies..."
+python3.12 -m pip install click rich pyyaml infoblox-client \
+  --index-url http://your-internal-pip-mirror/simple \
+  --trusted-host your-internal-pip-mirror \
+  --quiet
+
+echo "  Done."
+
+# --- Step 2: Deploy source files ---
+echo "[2/3] Deploying source files..."
+
+mkdir -p "$SRC_DIR/cli" "$SRC_DIR/core" "$SRC_DIR/formatters" "$SRC_DIR/objects" "$SRC_DIR/utils"
+mkdir -p "$BIN_DIR"
+
+# ===== ibxcli/__init__.py =====
+cat > "$SRC_DIR/__init__.py" << 'PYEOF'
+__version__ = "0.1.0"
+PYEOF
+
+# ===== ibxcli/__main__.py =====
+cat > "$SRC_DIR/__main__.py" << 'PYEOF'
+from ibxcli.cli.main import cli
+PYEOF
+
+# ===== ibxcli/utils/__init__.py =====
+cat > "$SRC_DIR/utils/__init__.py" << 'PYEOF'
+PYEOF
+
+# ===== ibxcli/core/__init__.py =====
+cat > "$SRC_DIR/core/__init__.py" << 'PYEOF'
+PYEOF
+
+# ===== ibxcli/core/exceptions.py =====
+cat > "$SRC_DIR/core/exceptions.py" << 'PYEOF'
+"""Custom exception hierarchy for ibx-cli."""
+
+
+class IbxError(Exception):
+    """Base exception for all ibx-cli errors."""
+
+
+class IbxConnectionError(IbxError):
+    """Network or connection failure."""
+
+
+class IbxAuthError(IbxError):
+    """Authentication failure (401/403)."""
+
+
+class IbxWapiError(IbxError):
+    """WAPI returned an error response."""
+
+    def __init__(self, code: int, wapi_code: str = "", wapi_text: str = ""):
+        super().__init__(wapi_text or f"WAPI error {code}")
+        self.code = code
+        self.wapi_code = wapi_code
+        self.wapi_text = wapi_text
+
+
+class IbxConfigError(IbxError):
+    """Configuration file or value error."""
+
+
+class IbxFormatError(IbxError):
+    """Output formatting error."""
+PYEOF
+
+# ===== ibxcli/core/config.py =====
+cat > "$SRC_DIR/core/config.py" << 'PYEOF'
+"""Configuration loading and merging for ibx-cli."""
+
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+from ibxcli.core.exceptions import IbxConfigError
+
+DEFAULT_CONFIG_PATH = Path.home() / ".infoblox" / "config"
+
+DEFAULTS = {
+    "host": "",
+    "username": "",
+    "password": "",
+    "wapi_version": "2.13",
+    "ssl_verify": True,
+    "timeout": 30,
+    "max_results": 1000,
+}
+
+ENV_MAP = {
+    "IBX_HOST": "host",
+    "IBX_USERNAME": "username",
+    "IBX_PASSWORD": "password",
+    "IBX_WAPI_VERSION": "wapi_version",
+    "IBX_SSL_VERIFY": "ssl_verify",
+    "IBX_TIMEOUT": "timeout",
+    "IBX_MAX_RESULTS": "max_results",
+}
+
+
+@dataclass
+class ConnectionConfig:
+    """Resolved connection configuration."""
+
+    host: str
+    username: str
+    password: str
+    wapi_version: str = "2.13"
+    ssl_verify: bool = True
+    timeout: int = 30
+    max_results: int = 1000
+
+
+def _load_yaml(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        with open(path) as f:
+            return yaml.safe_load(f) or {}
+    except yaml.YAMLError as e:
+        raise IbxConfigError(f"Failed to parse {path}: {e}")
+
+
+def _merge(base: dict, override: dict) -> dict:
+    result = dict(base)
+    for k, v in override.items():
+        if v is not None:
+            result[k] = v
+    return result
+
+
+def _coerce_types(d: dict) -> dict:
+    out = dict(d)
+    if isinstance(out.get("ssl_verify"), str):
+        out["ssl_verify"] = out["ssl_verify"].lower() in ("true", "1", "yes")
+    for key in ("timeout", "max_results"):
+        if isinstance(out.get(key), str):
+            try:
+                out[key] = int(out[key])
+            except ValueError:
+                pass
+    return out
+
+
+def load_config(
+    config_path: Path | None = None,
+    profile: str | None = None,
+    cli_overrides: dict[str, Any] | None = None,
+) -> ConnectionConfig:
+    """Load and merge config from file, env, and CLI flags.
+
+    Resolution order (later overrides earlier):
+    1. Hardcoded defaults
+    2. Config file defaults
+    3. Config file profile (if specified)
+    4. Environment variables
+    5. CLI overrides
+    """
+    cfg_path = config_path or DEFAULT_CONFIG_PATH
+    raw = _load_yaml(cfg_path)
+
+    merged = dict(DEFAULTS)
+
+    if "defaults" in raw:
+        merged = _merge(merged, raw["defaults"])
+
+    if profile and "profiles" in raw and profile in raw["profiles"]:
+        merged = _merge(merged, raw["profiles"][profile])
+
+    for env_key, cfg_key in ENV_MAP.items():
+        val = os.environ.get(env_key)
+        if val is not None:
+            merged[cfg_key] = val
+
+    if cli_overrides:
+        merged = _merge(merged, cli_overrides)
+
+    merged = _coerce_types(merged)
+
+    if not merged["host"]:
+        raise IbxConfigError(
+            "No Infoblox host configured. "
+            "Set --host flag, IBX_HOST env var, or create ~/.infoblox/config"
+        )
+    if not merged["username"]:
+        raise IbxConfigError(
+            "No Infoblox username configured. "
+            "Set --username flag, IBX_USERNAME env var, or config file"
+        )
+    if not merged["password"]:
+        raise IbxConfigError(
+            "No Infoblox password configured. "
+            "Set --password flag, IBX_PASSWORD env var, or config file"
+        )
+
+    return ConnectionConfig(
+        host=merged["host"],
+        username=merged["username"],
+        password=merged["password"],
+        wapi_version=str(merged["wapi_version"]),
+        ssl_verify=bool(merged["ssl_verify"]),
+        timeout=int(merged["timeout"]),
+        max_results=int(merged["max_results"]),
+    )
+PYEOF
+
+# ===== ibxcli/core/client.py =====
+cat > "$SRC_DIR/core/client.py" << 'PYEOF'
+"""WAPI client wrapper around infoblox_client.connector."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from infoblox_client import connector
+
+from ibxcli.core.config import ConnectionConfig
+from ibxcli.core.exceptions import IbxAuthError, IbxConnectionError, IbxWapiError
+
+
+class IbxClient:
+    """Thin wrapper around infoblox_client.connector.Connector.
+
+    Provides automatic pagination, return field control, and error translation.
+    """
+
+    def __init__(self, config: ConnectionConfig):
+        opts = {
+            "host": config.host,
+            "username": config.username,
+            "password": config.password,
+            "wapi_version": config.wapi_version,
+            "ssl_verify": config.ssl_verify,
+        }
+        try:
+            self._connector = connector.Connector(opts)
+        except Exception as e:
+            raise IbxConnectionError(f"Failed to initialize connector: {e}")
+        self._max_results = config.max_results
+        self._timeout = config.timeout
+
+    def get(
+        self,
+        obj_type: str,
+        search_fields: dict | None = None,
+        return_fields: list[str] | None = None,
+        max_results: int | None = None,
+    ) -> list[dict]:
+        """Fetch objects from WAPI with automatic pagination."""
+        kwargs: dict[str, Any] = {}
+        if return_fields:
+            kwargs["_return_fields"] = ",".join(return_fields)
+        kwargs["_max_results"] = max_results or self._max_results
+
+        try:
+            result = self._connector.get_object(
+                obj_type, search_fields or {}, **kwargs
+            )
+            return result
+        except connector.InfobloxConnectionException as e:
+            raise IbxConnectionError(f"Connection error: {e}") from e
+        except connector.InfobloxException as e:
+            err_text = str(e)
+            if "401" in err_text or "403" in err_text:
+                raise IbxAuthError(
+                    f"Authentication failed for {self._connector.host}"
+                ) from e
+            raise IbxWapiError(code=400, wapi_code="", wapi_text=err_text) from e
+        except Exception as e:
+            raise IbxConnectionError(f"Unexpected error: {e}") from e
+
+    def raw_get(self, obj_type: str, **kwargs: Any) -> list[dict]:
+        """Direct pass-through to connector.get_object for edge cases."""
+        search = kwargs.pop("search", {})
+        try:
+            return self._connector.get_object(obj_type, search, **kwargs)
+        except connector.InfobloxException as e:
+            raise IbxWapiError(code=400, wapi_text=str(e)) from e
+
+    @property
+    def connector(self):
+        """Expose the underlying connector for advanced operations."""
+        return self._connector
+PYEOF
+
+# ===== ibxcli/core/query.py =====
+cat > "$SRC_DIR/core/query.py" << 'PYEOF'
+"""Query execution engine for ibx-cli."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+
+@dataclass
+class QueryParams:
+    """Parameters for a single WAPI query."""
+
+    obj_type: str
+    search_filters: dict = field(default_factory=dict)
+    return_fields: list[str] = field(default_factory=list)
+    limit: int = 100
+    sort_by: str | None = None
+
+
+@dataclass
+class QueryResult:
+    """Result of a WAPI query."""
+
+    records: list[dict]
+    fields: list[str]
+    total_count: int
+
+
+class QueryExecutor:
+    """Executes queries against the WAPI and post-processes results."""
+
+    def __init__(self, client):
+        self._client = client
+
+    def build_params(
+        self,
+        obj_type: str,
+        search_filters: dict,
+        default_fields: list[str],
+    ) -> QueryParams:
+        """Build QueryParams from inputs."""
+        return QueryParams(
+            obj_type=obj_type,
+            search_filters=search_filters,
+            return_fields=list(default_fields),
+        )
+
+    def execute(self, params: QueryParams) -> QueryResult:
+        """Execute the query and apply post-processing."""
+        search = dict(params.search_filters)
+        if params.sort_by:
+            search["_sort"] = params.sort_by
+
+        records = self._client.get(
+            obj_type=params.obj_type,
+            search_fields=search,
+            return_fields=params.return_fields or None,
+        )
+
+        if params.limit and len(records) > params.limit:
+            records = records[:params.limit]
+
+        if params.return_fields:
+            fields = params.return_fields
+        elif records:
+            fields = list(records[0].keys())
+        else:
+            fields = []
+
+        return QueryResult(
+            records=records,
+            fields=fields,
+            total_count=len(records),
+        )
+PYEOF
+
+# ===== ibxcli/formatters/__init__.py =====
+cat > "$SRC_DIR/formatters/__init__.py" << 'PYEOF'
+PYEOF
+
+# ===== ibxcli/formatters/base.py =====
+cat > "$SRC_DIR/formatters/base.py" << 'PYEOF'
+"""Formatter base class and registry."""
+
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+
+
+class BaseFormatter(ABC):
+    """Output formatter interface."""
+
+    @abstractmethod
+    def render(self, records: list[dict], fields: list[str] | None) -> str:
+        """Render records to a string."""
+
+
+FORMATTERS: dict[str, type[BaseFormatter]] = {}
+
+
+def register_formatter(name: str):
+    """Decorator to register a formatter class."""
+    def wrapper(cls):
+        FORMATTERS[name] = cls
+        return cls
+    return wrapper
+
+
+def get_formatter(name: str) -> BaseFormatter:
+    """Get a formatter instance by name."""
+    from ibxcli.formatters import table, json_fmt, csv_fmt  # noqa: F401
+    cls = FORMATTERS.get(name)
+    if cls is None:
+        raise ValueError(f"Unknown format: {name}")
+    return cls()
+PYEOF
+
+# ===== ibxcli/formatters/table.py =====
+cat > "$SRC_DIR/formatters/table.py" << 'PYEOF'
+"""Rich table formatter."""
+
+import io
+from rich.console import Console
+from rich.table import Table
+
+from ibxcli.formatters.base import BaseFormatter, register_formatter
+
+
+@register_formatter("table")
+class TableFormatter(BaseFormatter):
+    def render(self, records: list[dict], fields: list[str] | None) -> str:
+        if not records:
+            return ""
+
+        cols = fields or list(records[0].keys())
+        table = Table(show_header=True, header_style="bold cyan")
+        for col in cols:
+            table.add_column(col, no_wrap=True, max_width=40)
+
+        for record in records:
+            table.add_row(*[str(record.get(c, "")) for c in cols])
+
+        f = io.StringIO()
+        c = Console(file=f, force_terminal=True, width=160)
+        c.print(table)
+        return f.getvalue()
+PYEOF
+
+# ===== ibxcli/formatters/json_fmt.py =====
+cat > "$SRC_DIR/formatters/json_fmt.py" << 'PYEOF'
+"""JSON formatter."""
+
+import json
+from ibxcli.formatters.base import BaseFormatter, register_formatter
+
+
+@register_formatter("json")
+class JsonFormatter(BaseFormatter):
+    def render(self, records: list[dict], fields: list[str] | None) -> str:
+        if fields:
+            records = [{k: v for k, v in r.items() if k in fields} for r in records]
+        return json.dumps(records, indent=2, ensure_ascii=False)
+PYEOF
+
+# ===== ibxcli/formatters/csv_fmt.py =====
+cat > "$SRC_DIR/formatters/csv_fmt.py" << 'PYEOF'
+"""CSV formatter."""
+
+import csv
+import io
+from ibxcli.formatters.base import BaseFormatter, register_formatter
+
+
+@register_formatter("csv")
+class CsvFormatter(BaseFormatter):
+    def render(self, records: list[dict], fields: list[str] | None) -> str:
+        if not records:
+            return ""
+
+        cols = fields or list(records[0].keys())
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=cols, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(records)
+        return output.getvalue()
+PYEOF
+
+# ===== ibxcli/objects/__init__.py =====
+cat > "$SRC_DIR/objects/__init__.py" << 'PYEOF'
+"""Object handler registry."""
+
+from ibxcli.objects.base import ObjectHandler
+from ibxcli.objects.dns import (
+    ARecordHandler, AAAARecordHandler, AllRecordsHandler, AuthZoneHandler,
+    CNAMERecordHandler, HostRecordHandler, MXRecordHandler, NSRecordHandler,
+    PTRRecordHandler, TXTRecordHandler,
+)
+from ibxcli.objects.dhcp import (
+    FixedAddressHandler, IPv4AddressHandler, IPv6NetworkHandler,
+    LeaseHandler, NetworkContainerHandler, NetworkHandler,
+)
+from ibxcli.objects.infra import (
+    DNSViewHandler, GridHandler, MemberHandler, NetworkViewHandler,
+)
+
+HANDLERS: dict[str, ObjectHandler] = {
+    # DNS
+    "zone:auth": AuthZoneHandler(),
+    "record:a": ARecordHandler(),
+    "record:aaaa": AAAARecordHandler(),
+    "record:cname": CNAMERecordHandler(),
+    "record:mx": MXRecordHandler(),
+    "record:ns": NSRecordHandler(),
+    "record:txt": TXTRecordHandler(),
+    "record:ptr": PTRRecordHandler(),
+    "record:host": HostRecordHandler(),
+    "allrecords": AllRecordsHandler(),
+    # DHCP
+    "network": NetworkHandler(),
+    "ipv6network": IPv6NetworkHandler(),
+    "networkcontainer": NetworkContainerHandler(),
+    "fixedaddress": FixedAddressHandler(),
+    "lease": LeaseHandler(),
+    "ipv4address": IPv4AddressHandler(),
+    # Infrastructure
+    "grid": GridHandler(),
+    "member": MemberHandler(),
+    "view": DNSViewHandler(),
+    "networkview": NetworkViewHandler(),
+}
+PYEOF
+
+# ===== ibxcli/objects/base.py =====
+cat > "$SRC_DIR/objects/base.py" << 'PYEOF'
+"""Base class for all NIOS object handlers."""
+
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+
+
+class ObjectHandler(ABC):
+    """Base class for all NIOS object type handlers."""
+
+    obj_type: str                       # WAPI object type, e.g., "record:a"
+    display_name: str                   # Display name, e.g., "A Records"
+    default_return_fields: list[str]    # Default fields for table output
+
+    @abstractmethod
+    def build_search_filters(self, **kwargs) -> dict:
+        """Translate CLI keyword arguments into WAPI search dict."""
+        ...
+PYEOF
+
+# ===== ibxcli/objects/dns.py =====
+cat > "$SRC_DIR/objects/dns.py" << 'PYEOF'
+"""DNS object handlers."""
+
+from __future__ import annotations
+
+from ibxcli.objects.base import ObjectHandler
+
+
+class AuthZoneHandler(ObjectHandler):
+    obj_type = "zone_auth"
+    display_name = "Authoritative Zones"
+    default_return_fields = ["fqdn", "view", "zone_format", "comment"]
+
+    def build_search_filters(self, view=None, fqdn=None, regex=False):
+        filters = {}
+        if view:
+            filters["view"] = view
+        if fqdn:
+            filters["fqdn~" if regex else "fqdn"] = fqdn
+        return filters
+
+
+class ARecordHandler(ObjectHandler):
+    obj_type = "record:a"
+    display_name = "A Records"
+    default_return_fields = ["name", "ipv4addr", "view", "zone", "ttl", "comment"]
+
+    def build_search_filters(self, name=None, ipv4addr=None, zone=None, view=None, regex=False):
+        filters = {}
+        if name:
+            filters["name~" if regex else "name"] = name
+        if ipv4addr:
+            filters["ipv4addr"] = ipv4addr
+        if zone:
+            filters["zone"] = zone
+        if view:
+            filters["view"] = view
+        return filters
+
+
+class AAAARecordHandler(ObjectHandler):
+    obj_type = "record:aaaa"
+    display_name = "AAAA Records"
+    default_return_fields = ["name", "ipv6addr", "view", "zone", "ttl", "comment"]
+
+    def build_search_filters(self, name=None, ipv6addr=None, zone=None, view=None, regex=False):
+        filters = {}
+        if name:
+            filters["name~" if regex else "name"] = name
+        if ipv6addr:
+            filters["ipv6addr"] = ipv6addr
+        if zone:
+            filters["zone"] = zone
+        if view:
+            filters["view"] = view
+        return filters
+
+
+class CNAMERecordHandler(ObjectHandler):
+    obj_type = "record:cname"
+    display_name = "CNAME Records"
+    default_return_fields = ["name", "canonical", "view", "zone", "ttl", "comment"]
+
+    def build_search_filters(self, name=None, canonical=None, zone=None, view=None, regex=False):
+        filters = {}
+        if name:
+            filters["name~" if regex else "name"] = name
+        if canonical:
+            filters["canonical"] = canonical
+        if zone:
+            filters["zone"] = zone
+        if view:
+            filters["view"] = view
+        return filters
+
+
+class MXRecordHandler(ObjectHandler):
+    obj_type = "record:mx"
+    display_name = "MX Records"
+    default_return_fields = ["name", "mail_exchanger", "preference", "view", "zone", "ttl"]
+
+    def build_search_filters(self, name=None, zone=None, view=None, regex=False):
+        filters = {}
+        if name:
+            filters["name~" if regex else "name"] = name
+        if zone:
+            filters["zone"] = zone
+        if view:
+            filters["view"] = view
+        return filters
+
+
+class NSRecordHandler(ObjectHandler):
+    obj_type = "record:ns"
+    display_name = "NS Records"
+    default_return_fields = ["name", "nameserver", "view", "zone", "ttl"]
+
+    def build_search_filters(self, name=None, zone=None, view=None, regex=False):
+        filters = {}
+        if name:
+            filters["name~" if regex else "name"] = name
+        if zone:
+            filters["zone"] = zone
+        if view:
+            filters["view"] = view
+        return filters
+
+
+class TXTRecordHandler(ObjectHandler):
+    obj_type = "record:txt"
+    display_name = "TXT Records"
+    default_return_fields = ["name", "text", "view", "zone", "ttl", "comment"]
+
+    def build_search_filters(self, name=None, zone=None, view=None, regex=False):
+        filters = {}
+        if name:
+            filters["name~" if regex else "name"] = name
+        if zone:
+            filters["zone"] = zone
+        if view:
+            filters["view"] = view
+        return filters
+
+
+class PTRRecordHandler(ObjectHandler):
+    obj_type = "record:ptr"
+    display_name = "PTR Records"
+    default_return_fields = ["name", "ptrdname", "ipv4addr", "ipv6addr", "view", "zone", "ttl"]
+
+    def build_search_filters(self, name=None, ipv4addr=None, ipv6addr=None, zone=None, view=None, regex=False):
+        filters = {}
+        if name:
+            filters["name~" if regex else "name"] = name
+        if ipv4addr:
+            filters["ipv4addr"] = ipv4addr
+        if ipv6addr:
+            filters["ipv6addr"] = ipv6addr
+        if zone:
+            filters["zone"] = zone
+        if view:
+            filters["view"] = view
+        return filters
+
+
+class HostRecordHandler(ObjectHandler):
+    obj_type = "record:host"
+    display_name = "Host Records"
+    default_return_fields = ["name", "ipv4addrs", "view", "comment"]
+
+    def build_search_filters(self, name=None, ipv4addr=None, mac=None, view=None, regex=False):
+        filters = {}
+        if name:
+            filters["name~" if regex else "name"] = name
+        if ipv4addr:
+            filters["ipv4addr"] = ipv4addr
+        if mac:
+            filters["mac"] = mac
+        if view:
+            filters["view"] = view
+        return filters
+
+
+class AllRecordsHandler(ObjectHandler):
+    obj_type = "allrecords"
+    display_name = "All Records"
+    default_return_fields = ["name", "type", "address", "view", "zone", "ttl"]
+
+    def build_search_filters(self, zone=None, view=None, type=None, regex=False):
+        filters = {}
+        if zone:
+            filters["zone"] = zone
+        if view:
+            filters["view"] = view
+        if type:
+            filters["type"] = type
+        return filters
+PYEOF
+
+# ===== ibxcli/objects/dhcp.py =====
+cat > "$SRC_DIR/objects/dhcp.py" << 'PYEOF'
+"""DHCP object handlers."""
+
+from __future__ import annotations
+
+from ibxcli.objects.base import ObjectHandler
+
+
+class NetworkHandler(ObjectHandler):
+    obj_type = "network"
+    display_name = "IPv4 Networks"
+    default_return_fields = ["network", "network_view", "comment", "dhcp_utilization"]
+
+    def build_search_filters(self, network=None, network_view=None):
+        filters = {}
+        if network:
+            filters["network"] = network
+        if network_view:
+            filters["network_view"] = network_view
+        return filters
+
+
+class IPv6NetworkHandler(ObjectHandler):
+    obj_type = "ipv6network"
+    display_name = "IPv6 Networks"
+    default_return_fields = ["ipv6net", "network_view", "comment"]
+
+    def build_search_filters(self, network=None, network_view=None):
+        filters = {}
+        if network:
+            filters["ipv6net"] = network
+        if network_view:
+            filters["network_view"] = network_view
+        return filters
+
+
+class NetworkContainerHandler(ObjectHandler):
+    obj_type = "networkcontainer"
+    display_name = "Network Containers"
+    default_return_fields = ["network", "network_view", "comment"]
+
+    def build_search_filters(self, network=None, network_view=None):
+        filters = {}
+        if network:
+            filters["network"] = network
+        if network_view:
+            filters["network_view"] = network_view
+        return filters
+
+
+class FixedAddressHandler(ObjectHandler):
+    obj_type = "fixedaddress"
+    display_name = "Fixed Addresses"
+    default_return_fields = ["ipv4addr", "mac", "name", "network", "network_view", "comment"]
+
+    def build_search_filters(self, ipv4addr=None, mac=None, network_view=None):
+        filters = {}
+        if ipv4addr:
+            filters["ipv4addr"] = ipv4addr
+        if mac:
+            filters["mac"] = mac
+        if network_view:
+            filters["network_view"] = network_view
+        return filters
+
+
+class LeaseHandler(ObjectHandler):
+    obj_type = "lease"
+    display_name = "DHCP Leases"
+    default_return_fields = ["address", "binding_state", "client_hostname", "network", "starts", "ends"]
+
+    def build_search_filters(self, address=None, mac=None, network=None, state=None):
+        filters = {}
+        if address:
+            filters["address"] = address
+        if mac:
+            filters["hardware"] = mac
+        if network:
+            filters["network"] = network
+        if state:
+            filters["binding_state"] = state.upper()
+        return filters
+
+
+class IPv4AddressHandler(ObjectHandler):
+    obj_type = "ipv4address"
+    display_name = "IPv4 Address Usage"
+    default_return_fields = ["ip_address", "network", "status", "names", "mac_address"]
+
+    def build_search_filters(self, network=None, status=None, mac=None, name=None):
+        filters = {}
+        if network:
+            filters["network"] = network
+        if status:
+            filters["status"] = status.upper()
+        if mac:
+            filters["mac_address"] = mac
+        if name:
+            filters["names"] = name
+        return filters
+PYEOF
+
+# ===== ibxcli/objects/infra.py =====
+cat > "$SRC_DIR/objects/infra.py" << 'PYEOF'
+"""Infrastructure object handlers."""
+
+from __future__ import annotations
+
+from ibxcli.objects.base import ObjectHandler
+
+
+class GridHandler(ObjectHandler):
+    obj_type = "grid"
+    display_name = "Grid"
+    default_return_fields = ["name", "members"]
+
+    def build_search_filters(self):
+        return {}
+
+
+class MemberHandler(ObjectHandler):
+    obj_type = "member"
+    display_name = "Grid Members"
+    default_return_fields = ["name", "ipv4addr", "platform", "status", "services"]
+
+    def build_search_filters(self, host_name=None, service_state=None):
+        filters = {}
+        if host_name:
+            filters["name"] = host_name
+        if service_state:
+            filters["status"] = service_state
+        return filters
+
+
+class DNSViewHandler(ObjectHandler):
+    obj_type = "view"
+    display_name = "DNS Views"
+    default_return_fields = ["name", "network_view", "comment", "is_default"]
+
+    def build_search_filters(self, name=None, network_view=None):
+        filters = {}
+        if name:
+            filters["name"] = name
+        if network_view:
+            filters["network_view"] = network_view
+        return filters
+
+
+class NetworkViewHandler(ObjectHandler):
+    obj_type = "networkview"
+    display_name = "Network Views"
+    default_return_fields = ["name", "comment", "is_default"]
+
+    def build_search_filters(self, name=None):
+        filters = {}
+        if name:
+            filters["name"] = name
+        return filters
+PYEOF
+
+# ===== ibxcli/cli/__init__.py =====
+cat > "$SRC_DIR/cli/__init__.py" << 'PYEOF'
+PYEOF
+
+# ===== ibxcli/cli/main.py =====
+cat > "$SRC_DIR/cli/main.py" << 'PYEOF'
+"""Root CLI group and global options for ibx-cli."""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import click
+from rich.console import Console
+
+from ibxcli import __version__
+from ibxcli.core.client import IbxClient
+from ibxcli.core.config import DEFAULT_CONFIG_PATH, load_config
+from ibxcli.core.exceptions import IbxAuthError, IbxConfigError, IbxConnectionError, IbxWapiError
+from ibxcli.core.query import QueryExecutor
+from ibxcli.formatters.base import get_formatter
+
+console = Console(stderr=True)
+
+
+def output_options(f):
+    """Decorator adding --format, --fields, --limit, --sort to a command."""
+    f = click.option("--format", "output_format", type=click.Choice(["table", "json", "csv"]), default="table", help="Output format")(f)
+    f = click.option("--fields", help="Comma-separated fields to display")(f)
+    f = click.option("--limit", type=int, default=100, show_default=True, help="Max rows to display")(f)
+    f = click.option("--sort", help="Sort results by field")(f)
+    return f
+
+
+def execute_and_render(ctx, obj_type, search_filters):
+    """Common pattern: build query, execute, render results."""
+    _ensure_client(ctx)
+    from ibxcli.objects import HANDLERS
+
+    handler = HANDLERS.get(obj_type)
+    if handler is None:
+        console.print(f"[red]Unknown object type: {obj_type}[/red]")
+        sys.exit(1)
+
+    params = ctx.obj["executor"].build_params(
+        obj_type=obj_type,
+        search_filters=search_filters,
+        default_fields=handler.default_return_fields,
+    )
+
+    fmt = ctx.params.get("output_format", "table")
+    fields_override = ctx.params.get("fields")
+    limit = ctx.params.get("limit", 100)
+    sort_by = ctx.params.get("sort")
+
+    if fields_override:
+        params.return_fields = [f.strip() for f in fields_override.split(",")]
+    params.limit = limit
+    params.sort_by = sort_by
+
+    try:
+        result = ctx.obj["executor"].execute(params)
+    except IbxConnectionError as e:
+        console.print(f"[red]Connection error:[/red] {e}")
+        sys.exit(1)
+    except IbxAuthError as e:
+        console.print(f"[red]Auth error:[/red] {e}")
+        sys.exit(1)
+    except IbxWapiError as e:
+        console.print(f"[red]WAPI error:[/red] {e.wapi_text or e}")
+        sys.exit(1)
+
+    if not result.records:
+        console.print("[yellow]No results found.[/yellow]")
+        return
+
+    formatter = get_formatter(fmt)
+    console.print(formatter.render(result.records, result.fields), soft_wrap=True)
+
+
+def _resolve_config(ctx: click.Context):
+    """Merge config file, env vars, and CLI flags into ConnectionConfig."""
+    cli_overrides = {}
+    for key in ("host", "username", "password", "wapi_version", "ssl_verify", "timeout", "max_results"):
+        val = ctx.params.get(key)
+        if val is not None:
+            cli_overrides[key] = val
+
+    config_path = ctx.params.get("config")
+    profile = ctx.params.get("profile")
+    cfg_file = Path(config_path) if config_path else DEFAULT_CONFIG_PATH
+
+    return load_config(config_path=cfg_file, profile=profile, cli_overrides=cli_overrides)
+
+
+def _ensure_client(ctx):
+    """Lazy config resolution — only when a leaf command needs the client."""
+    if "client" not in ctx.obj:
+        cfg = _resolve_config(ctx)
+        try:
+            client = IbxClient(cfg)
+        except (IbxConnectionError, IbxAuthError, IbxError) as e:
+            console.print(f"[red]Connection error:[/red] {e}")
+            sys.exit(1)
+        ctx.obj["client"] = client
+        ctx.obj["executor"] = QueryExecutor(client)
+        ctx.obj["config"] = cfg
+
+
+@click.group(invoke_without_command=True)
+@click.option("--config", type=click.Path(), help="Config file path (default: ~/.infoblox/config)")
+@click.option("--profile", help="Use named profile from config file")
+@click.option("--host", help="Infoblox Grid Master hostname or IP")
+@click.option("--username", help="API username")
+@click.option("--password", help="API password (or set IBX_PASSWORD env)")
+@click.option("--wapi-version", default=None, help="WAPI version (default: 2.13)")
+@click.option("--no-verify-ssl", is_flag=True, help="Disable SSL certificate verification")
+@click.option("--timeout", type=int, default=None, help="Request timeout in seconds (default: 30)")
+@click.option("--max-results", type=int, default=None, help="Max results per query (default: 1000)")
+@click.version_option(__version__, prog_name="ibx")
+@click.pass_context
+def cli(ctx, config, profile, host, username, password, wapi_version, no_verify_ssl, timeout, max_results):
+    """ibx - Infoblox NIOS CLI tool for DNS/DHCP management.
+
+    Query and inspect DNS records, DHCP networks, leases, and more
+    via the Infoblox WAPI.
+    """
+    ctx.ensure_object(dict)
+
+
+# Register subcommand groups (import after cli is defined to avoid circular imports)
+from ibxcli.cli.config import config  # noqa: E402
+from ibxcli.cli.dns import dns  # noqa: E402
+from ibxcli.cli.dhcp import dhcp  # noqa: E402
+from ibxcli.cli.infra import infra  # noqa: E402
+from ibxcli.cli.search import search_cmd  # noqa: E402
+
+cli.add_command(config)
+cli.add_command(dns)
+cli.add_command(dhcp)
+cli.add_command(infra)
+cli.add_command(search_cmd)
+PYEOF
+
+# ===== ibxcli/cli/config.py =====
+cat > "$SRC_DIR/cli/config.py" << 'PYEOF'
+"""Local config management commands."""
+
+import sys
+from pathlib import Path
+
+import click
+import yaml
+from rich.console import Console
+
+from ibxcli.core.config import DEFAULT_CONFIG_PATH
+from ibxcli.core.client import IbxClient
+from ibxcli.core.exceptions import IbxError
+
+console = Console(stderr=True)
+console_stdout = Console()
+
+SAMPLE_CONFIG = """\
+# ibx-cli configuration file
+# Generated by: ibx config init
+# File permissions should be: chmod 600
+
+defaults:
+  host: infoblox.example.com
+  username: admin
+  wapi_version: "2.13"
+  ssl_verify: false
+  timeout: 30
+  max_results: 1000
+
+# Named profiles override defaults
+profiles:
+  prod:
+    host: infoblox-prod.example.com
+    username: prod-admin
+  lab:
+    host: infoblox-lab.example.com
+    username: lab-admin
+    ssl_verify: false
+"""
+
+
+@click.group()
+def config():
+    """Local config management."""
+    pass
+
+
+@config.command("init")
+def config_init():
+    """Create a sample config file at ~/.infoblox/config."""
+    cfg_path = DEFAULT_CONFIG_PATH
+    if cfg_path.exists():
+        console.print(f"[yellow]Config already exists at {cfg_path}[/yellow]")
+        return
+
+    cfg_path.parent.mkdir(parents=True, exist_ok=True)
+    cfg_path.write_text(SAMPLE_CONFIG)
+    console.print(f"[green]Created sample config at {cfg_path}[/green]")
+    console.print("Edit it with your Infoblox connection details.")
+
+
+@config.command("show")
+@click.pass_context
+def config_show(ctx):
+    """Show the resolved configuration (password masked)."""
+    from ibxcli.cli.main import _ensure_client
+    _ensure_client(ctx)
+    cfg = ctx.obj.get("config")
+    if cfg is None:
+        console.print("[red]No config available[/red]")
+        return
+
+    safe = {
+        "host": cfg.host,
+        "username": cfg.username,
+        "password": "*" * len(cfg.password),
+        "wapi_version": cfg.wapi_version,
+        "ssl_verify": cfg.ssl_verify,
+        "timeout": cfg.timeout,
+        "max_results": cfg.max_results,
+    }
+    console_stdout.print(yaml.dump(safe, default_flow_style=False))
+
+
+@config.command("test-connection")
+@click.pass_context
+def test_connection(ctx):
+    """Test connection to Infoblox Grid Master."""
+    from ibxcli.cli.main import _ensure_client
+    _ensure_client(ctx)
+    client: IbxClient = ctx.obj.get("client")
+    if client is None:
+        console.print("[red]No client available[/red]")
+        sys.exit(1)
+
+    console.print(f"Connecting to {client._connector.host}...")
+    try:
+        result = client.get("grid")
+        if result:
+            grid_name = result[0].get("name", "unknown")
+            console.print(f"[green]Connected successfully![/green]")
+            console.print(f"  Grid: {grid_name}")
+            console.print(f"  WAPI version: {client._connector.wapi_version}")
+        else:
+            console.print("[yellow]Connected but no grid info returned[/yellow]")
+    except IbxError as e:
+        console.print(f"[red]Connection failed:[/red] {e}")
+        sys.exit(1)
+PYEOF
+
+# ===== ibxcli/cli/dns.py =====
+cat > "$SRC_DIR/cli/dns.py" << 'PYEOF'
+"""DNS command group."""
+
+import click
+
+from ibxcli.cli.main import execute_and_render, output_options
+from ibxcli.objects import HANDLERS
+
+
+@click.group()
+def dns():
+    """DNS management commands."""
+    pass
+
+
+@dns.command()
+@output_options
+@click.option("--view", help="DNS view filter")
+@click.option("--fqdn", help="Zone FQDN filter (use --regex for pattern match)")
+@click.option("--regex", is_flag=True, help="Treat fqdn as regex pattern")
+@click.pass_context
+def zones(ctx, view, fqdn, regex):
+    """List authoritative DNS zones."""
+    handler = HANDLERS["zone:auth"]
+    filters = handler.build_search_filters(view=view, fqdn=fqdn, regex=regex)
+    execute_and_render(ctx, "zone:auth", filters)
+
+
+@dns.command()
+@output_options
+@click.option("--name", help="Record name filter (use --regex for pattern match)")
+@click.option("--ipv4addr", help="IPv4 address filter")
+@click.option("--zone", help="Zone filter")
+@click.option("--view", help="DNS view filter")
+@click.option("--regex", is_flag=True, help="Treat name as regex pattern")
+@click.pass_context
+def a(ctx, name, ipv4addr, zone, view, regex):
+    """List DNS A records."""
+    handler = HANDLERS["record:a"]
+    filters = handler.build_search_filters(name=name, ipv4addr=ipv4addr, zone=zone, view=view, regex=regex)
+    execute_and_render(ctx, "record:a", filters)
+
+
+@dns.command()
+@output_options
+@click.option("--name", help="Record name filter (use --regex for pattern match)")
+@click.option("--ipv6addr", help="IPv6 address filter")
+@click.option("--zone", help="Zone filter")
+@click.option("--view", help="DNS view filter")
+@click.option("--regex", is_flag=True, help="Treat name as regex pattern")
+@click.pass_context
+def aaaa(ctx, name, ipv6addr, zone, view, regex):
+    """List DNS AAAA records."""
+    handler = HANDLERS["record:aaaa"]
+    filters = handler.build_search_filters(name=name, ipv6addr=ipv6addr, zone=zone, view=view, regex=regex)
+    execute_and_render(ctx, "record:aaaa", filters)
+
+
+@dns.command()
+@output_options
+@click.option("--name", help="Record name filter")
+@click.option("--canonical", help="Canonical name filter")
+@click.option("--zone", help="Zone filter")
+@click.option("--view", help="DNS view filter")
+@click.option("--regex", is_flag=True, help="Treat name as regex pattern")
+@click.pass_context
+def cname(ctx, name, canonical, zone, view, regex):
+    """List DNS CNAME records."""
+    handler = HANDLERS["record:cname"]
+    filters = handler.build_search_filters(name=name, canonical=canonical, zone=zone, view=view, regex=regex)
+    execute_and_render(ctx, "record:cname", filters)
+
+
+@dns.command()
+@output_options
+@click.option("--name", help="Record name filter")
+@click.option("--zone", help="Zone filter")
+@click.option("--view", help="DNS view filter")
+@click.option("--regex", is_flag=True, help="Treat name as regex pattern")
+@click.pass_context
+def mx(ctx, name, zone, view, regex):
+    """List DNS MX records."""
+    handler = HANDLERS["record:mx"]
+    filters = handler.build_search_filters(name=name, zone=zone, view=view, regex=regex)
+    execute_and_render(ctx, "record:mx", filters)
+
+
+@dns.command()
+@output_options
+@click.option("--name", help="Record name filter")
+@click.option("--zone", help="Zone filter")
+@click.option("--view", help="DNS view filter")
+@click.option("--regex", is_flag=True, help="Treat name as regex pattern")
+@click.pass_context
+def ns(ctx, name, zone, view, regex):
+    """List DNS NS records."""
+    handler = HANDLERS["record:ns"]
+    filters = handler.build_search_filters(name=name, zone=zone, view=view, regex=regex)
+    execute_and_render(ctx, "record:ns", filters)
+
+
+@dns.command()
+@output_options
+@click.option("--name", help="Record name filter")
+@click.option("--zone", help="Zone filter")
+@click.option("--view", help="DNS view filter")
+@click.option("--regex", is_flag=True, help="Treat name as regex pattern")
+@click.pass_context
+def txt(ctx, name, zone, view, regex):
+    """List DNS TXT records."""
+    handler = HANDLERS["record:txt"]
+    filters = handler.build_search_filters(name=name, zone=zone, view=view, regex=regex)
+    execute_and_render(ctx, "record:txt", filters)
+
+
+@dns.command()
+@output_options
+@click.option("--name", help="Record name filter")
+@click.option("--ipv4addr", help="IPv4 address filter")
+@click.option("--ipv6addr", help="IPv6 address filter")
+@click.option("--zone", help="Zone filter")
+@click.option("--view", help="DNS view filter")
+@click.option("--regex", is_flag=True, help="Treat name as regex pattern")
+@click.pass_context
+def ptr(ctx, name, ipv4addr, ipv6addr, zone, view, regex):
+    """List DNS PTR records."""
+    handler = HANDLERS["record:ptr"]
+    filters = handler.build_search_filters(name=name, ipv4addr=ipv4addr, ipv6addr=ipv6addr, zone=zone, view=view, regex=regex)
+    execute_and_render(ctx, "record:ptr", filters)
+
+
+@dns.command()
+@output_options
+@click.option("--name", help="Record name filter")
+@click.option("--ipv4addr", help="IPv4 address filter")
+@click.option("--mac", help="MAC address filter")
+@click.option("--view", help="DNS view filter")
+@click.option("--regex", is_flag=True, help="Treat name as regex pattern")
+@click.pass_context
+def hosts(ctx, name, ipv4addr, mac, view, regex):
+    """List DNS host records."""
+    handler = HANDLERS["record:host"]
+    filters = handler.build_search_filters(name=name, ipv4addr=ipv4addr, mac=mac, view=view, regex=regex)
+    execute_and_render(ctx, "record:host", filters)
+
+
+@dns.command("all-records")
+@output_options
+@click.option("--zone", required=True, help="Zone (required)")
+@click.option("--view", help="DNS view filter")
+@click.option("--type", "record_type", help="Filter by record type (A, CNAME, etc.)")
+@click.pass_context
+def all_records(ctx, zone, view, record_type):
+    """List all DNS records in a zone."""
+    handler = HANDLERS["allrecords"]
+    filters = handler.build_search_filters(zone=zone, view=view, type=record_type)
+    execute_and_render(ctx, "allrecords", filters)
+PYEOF
+
+# ===== ibxcli/cli/dhcp.py =====
+cat > "$SRC_DIR/cli/dhcp.py" << 'PYEOF'
+"""DHCP command group."""
+
+import click
+
+from ibxcli.cli.main import execute_and_render, output_options
+from ibxcli.objects import HANDLERS
+
+
+@click.group()
+def dhcp():
+    """DHCP management commands."""
+    pass
+
+
+@dhcp.command()
+@output_options
+@click.option("--network", help="CIDR network filter (e.g., 10.0.0.0/24)")
+@click.option("--network-view", help="Network view filter")
+@click.pass_context
+def networks(ctx, network, network_view):
+    """List IPv4 networks."""
+    handler = HANDLERS["network"]
+    filters = handler.build_search_filters(network=network, network_view=network_view)
+    execute_and_render(ctx, "network", filters)
+
+
+@dhcp.command()
+@output_options
+@click.option("--network", help="CIDR IPv6 network filter")
+@click.option("--network-view", help="Network view filter")
+@click.pass_context
+def ipv6_networks(ctx, network, network_view):
+    """List IPv6 networks."""
+    handler = HANDLERS["ipv6network"]
+    filters = handler.build_search_filters(network=network, network_view=network_view)
+    execute_and_render(ctx, "ipv6network", filters)
+
+
+@dhcp.command()
+@output_options
+@click.option("--network", help="CIDR container network filter")
+@click.option("--network-view", help="Network view filter")
+@click.pass_context
+def containers(ctx, network, network_view):
+    """List network containers."""
+    handler = HANDLERS["networkcontainer"]
+    filters = handler.build_search_filters(network=network, network_view=network_view)
+    execute_and_render(ctx, "networkcontainer", filters)
+
+
+@dhcp.command()
+@output_options
+@click.option("--ipv4addr", help="IPv4 address filter")
+@click.option("--mac", help="MAC address filter")
+@click.option("--network-view", help="Network view filter")
+@click.pass_context
+def fixed_addresses(ctx, ipv4addr, mac, network_view):
+    """List DHCP fixed addresses (reservations)."""
+    handler = HANDLERS["fixedaddress"]
+    filters = handler.build_search_filters(ipv4addr=ipv4addr, mac=mac, network_view=network_view)
+    execute_and_render(ctx, "fixedaddress", filters)
+
+
+@dhcp.command()
+@output_options
+@click.option("--address", help="Leased IP address filter")
+@click.option("--mac", help="Client MAC address filter")
+@click.option("--network", help="Network filter")
+@click.option("--state", type=click.Choice(["active", "expired"]), help="Lease state filter")
+@click.pass_context
+def leases(ctx, address, mac, network, state):
+    """List DHCP leases."""
+    handler = HANDLERS["lease"]
+    filters = handler.build_search_filters(address=address, mac=mac, network=network, state=state)
+    execute_and_render(ctx, "lease", filters)
+
+
+@dhcp.command()
+@output_options
+@click.option("--network", help="Network filter")
+@click.option("--status", type=click.Choice(["used", "free"]), help="Address status filter")
+@click.option("--mac", help="MAC address filter")
+@click.option("--name", help="Associated name filter")
+@click.pass_context
+def ipv4_addresses(ctx, network, status, mac, name):
+    """List IPv4 address usage status."""
+    handler = HANDLERS["ipv4address"]
+    filters = handler.build_search_filters(network=network, status=status, mac=mac, name=name)
+    execute_and_render(ctx, "ipv4address", filters)
+PYEOF
+
+# ===== ibxcli/cli/infra.py =====
+cat > "$SRC_DIR/cli/infra.py" << 'PYEOF'
+"""Infrastructure command group."""
+
+import click
+
+from ibxcli.cli.main import execute_and_render, output_options
+from ibxcli.objects import HANDLERS
+
+
+@click.group()
+def infra():
+    """Infrastructure management commands."""
+    pass
+
+
+@infra.command()
+@output_options
+@click.pass_context
+def grid(ctx):
+    """Show grid properties."""
+    handler = HANDLERS["grid"]
+    filters = handler.build_search_filters()
+    execute_and_render(ctx, "grid", filters)
+
+
+@infra.command()
+@output_options
+@click.option("--host-name", help="Member hostname filter")
+@click.option("--service-state", help="Service state filter")
+@click.pass_context
+def members(ctx, host_name, service_state):
+    """List grid members."""
+    handler = HANDLERS["member"]
+    filters = handler.build_search_filters(host_name=host_name, service_state=service_state)
+    execute_and_render(ctx, "member", filters)
+
+
+@infra.command()
+@output_options
+@click.option("--name", help="DNS view name filter")
+@click.option("--network-view", help="Associated network view filter")
+@click.pass_context
+def views(ctx, name, network_view):
+    """List DNS views."""
+    handler = HANDLERS["view"]
+    filters = handler.build_search_filters(name=name, network_view=network_view)
+    execute_and_render(ctx, "view", filters)
+
+
+@infra.command()
+@output_options
+@click.option("--name", help="Network view name filter")
+@click.pass_context
+def network_views(ctx, name):
+    """List network views."""
+    handler = HANDLERS["networkview"]
+    filters = handler.build_search_filters(name=name)
+    execute_and_render(ctx, "networkview", filters)
+PYEOF
+
+# ===== ibxcli/cli/search.py =====
+cat > "$SRC_DIR/cli/search.py" << 'PYEOF'
+"""Global cross-object search command."""
+
+import click
+from rich.console import Console
+
+from ibxcli.core.exceptions import IbxConnectionError, IbxAuthError, IbxWapiError
+
+console = Console(stderr=True)
+
+
+@click.command("search")
+@click.argument("query")
+@click.option("--type", "obj_type", help="Limit search to object type (e.g., record:a, network)")
+@click.option("--by", type=click.Choice(["address", "fqdn", "mac_address"]), default="address",
+              help="Search field type (default: address)")
+@click.option("--format", "output_format", type=click.Choice(["table", "json", "csv"]), default="table", help="Output format")
+@click.option("--fields", help="Comma-separated fields to display")
+@click.option("--limit", type=int, default=100, show_default=True, help="Max rows to display")
+@click.option("--sort", help="Sort results by field")
+@click.pass_context
+def search_cmd(ctx, query, obj_type, by, output_format, fields, limit, sort):
+    """Search across all objects.
+
+    QUERY is the search string. Use --by to specify what field to search
+    (address, fqdn, mac_address). Use --type to limit the object types searched.
+    """
+    client = ctx.obj.get("client")
+    if client is None:
+        console.print("[red]No client available[/red]")
+        return
+
+    field_map = {
+        "address": "address",
+        "fqdn": "fqdn",
+        "mac_address": "mac_address",
+    }
+    search_field = field_map[by]
+
+    if obj_type:
+        obj_types = [obj_type]
+    else:
+        obj_types = ["record:a", "record:aaaa", "record:cname", "record:host", "record:ptr", "record:txt"]
+
+    all_records = []
+    for ot in obj_types:
+        try:
+            results = client.get(ot, {search_field: query})
+            for r in results:
+                r["_obj_type"] = ot
+            all_records.extend(results)
+        except (IbxConnectionError, IbxAuthError, IbxWapiError) as e:
+            console.print(f"[yellow]Warning: search {ot} failed: {e}[/yellow]")
+
+    if not all_records:
+        console.print("[yellow]No results found.[/yellow]")
+        return
+
+    if limit:
+        all_records = all_records[:limit]
+
+    if fields:
+        display_fields = [f.strip() for f in fields.split(",")]
+    else:
+        display_fields = ["_obj_type", "name", "address", "ipv4addr", "ipv6addr", "view", "zone"]
+        display_fields = [f for f in display_fields if any(f in r for r in all_records)]
+
+    from ibxcli.formatters.base import get_formatter
+    formatter = get_formatter(output_format)
+    console.print(formatter.render(all_records, display_fields), soft_wrap=True)
+PYEOF
+
+echo "  Deployed $(find "$SRC_DIR" -name '*.py' | wc -l | tr -d ' ') Python files."
+
+# --- Step 3: Create launcher script ---
+echo "[3/3] Creating launcher..."
+
+cat > "$BIN_DIR/ibx" << LAUNCHER
+#!/usr/bin/env bash
+# ibx-cli launcher -- auto-generated by install_ibxcli.sh
+export PYTHONPATH="$INSTALL_DIR/src:\${PYTHONPATH:-}"
+exec python3.12 -m ibxcli "\$@"
+LAUNCHER
+
+chmod +x "$BIN_DIR/ibx"
+
+echo ""
+echo "=== Installation complete ==="
+echo ""
+echo "Add to your PATH (add to ~/.bashrc):"
+echo "  export PATH=\"$BIN_DIR:\$PATH\""
+echo ""
+echo "Then run:"
+echo "  ibx --help"
+echo ""
+echo "Configure your connection:"
+echo "  ibx config init"
+echo "  # Edit ~/.infoblox/config with your Infoblox details"
