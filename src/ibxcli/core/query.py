@@ -48,7 +48,7 @@ class QueryExecutor:
         """Execute the query and apply post-processing."""
         search = dict(params.search_filters)
 
-        # Ensure extattrs is requested so we can extract eonid
+        # Ensure extattrs is requested so we can extract EONID
         return_fields = list(params.return_fields) if params.return_fields else []
         if return_fields and "extattrs" not in return_fields:
             return_fields.append("extattrs")
@@ -59,13 +59,13 @@ class QueryExecutor:
             return_fields=return_fields or None,
         )
 
-        # Post-process: extract eonid from extattrs, remove _ref and extattrs
+        # Post-process: extract EONID from extattrs, remove _ref and extattrs
         for record in records:
             extattrs = record.pop("extattrs", None)
-            if extattrs and "eonid" in extattrs:
-                record["eonid"] = extattrs["eonid"].get("value", "")
+            if extattrs and "EONID" in extattrs:
+                record["EONID"] = extattrs["EONID"].get("value", "")
             else:
-                record["eonid"] = ""
+                record["EONID"] = ""
             record.pop("_ref", None)
 
         # Client-side sorting (avoids WAPI _sort compatibility issues)
@@ -75,11 +75,11 @@ class QueryExecutor:
         if params.limit and len(records) > params.limit:
             records = records[:params.limit]
 
-        # Build display fields from handler defaults, removing _ref and adding eonid
+        # Build display fields from handler defaults, removing _ref and adding EONID
         if params.return_fields:
             fields = [f for f in params.return_fields if f != "_ref"]
-            if "eonid" not in fields:
-                fields.append("eonid")
+            if "EONID" not in fields:
+                fields.append("EONID")
         elif records:
             fields = list(records[0].keys())
         else:
