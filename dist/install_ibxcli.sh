@@ -410,13 +410,14 @@ def ptr(ctx, name, ipv4addr, ipv6addr, zone, view, regex, **kwargs):
 @click.option("--name", help="Record name filter")
 @click.option("--ipv4addr", help="IPv4 address filter")
 @click.option("--mac", help="MAC address filter")
+@click.option("--zone", help="Zone filter")
 @click.option("--view", help="DNS view filter")
 @click.option("--regex", is_flag=True, help="Treat name as regex pattern")
 @click.pass_context
-def hosts(ctx, name, ipv4addr, mac, view, regex, **kwargs):
+def hosts(ctx, name, ipv4addr, mac, zone, view, regex, **kwargs):
     """List DNS host records."""
     handler = HANDLERS["record:host"]
-    filters = handler.build_search_filters(name=name, ipv4addr=ipv4addr, mac=mac, view=view, regex=regex)
+    filters = handler.build_search_filters(name=name, ipv4addr=ipv4addr, mac=mac, zone=zone, view=view, regex=regex)
     execute_and_render(ctx, "record:host", filters, **kwargs)
 
 
@@ -1528,7 +1529,7 @@ class HostRecordHandler(ObjectHandler):
     display_name = "Host Records"
     default_return_fields = ["name", "ipv4addrs", "view", "comment", "EONID"]
 
-    def build_search_filters(self, name=None, ipv4addr=None, mac=None, view=None, regex=False):
+    def build_search_filters(self, name=None, ipv4addr=None, mac=None, zone=None, view=None, regex=False):
         filters = {}
         if name:
             filters["name~" if regex else "name"] = name
@@ -1536,6 +1537,8 @@ class HostRecordHandler(ObjectHandler):
             filters["ipv4addr"] = ipv4addr
         if mac:
             filters["mac"] = mac
+        if zone:
+            filters["zone"] = zone
         if view:
             filters["view"] = view
         return filters

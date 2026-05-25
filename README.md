@@ -208,7 +208,7 @@ ibx dns ns --zone "example.com"
 | `ibx dns ns` | `record:ns` | 名称服务器记录 | `--name`, `--zone`, `--view`, `--regex` |
 | `ibx dns txt` | `record:txt` | 文本记录 (SPF/DKIM 等) | `--name`, `--zone`, `--view`, `--regex` |
 | `ibx dns ptr` | `record:ptr` | 反向解析记录 | `--name`, `--ipv4addr`, `--ipv6addr`, `--zone`, `--view`, `--regex` |
-| `ibx dns hosts` | `record:host` | 主机记录 (含 IP+MAC) | `--name`, `--ipv4addr`, `--mac`, `--view`, `--regex` |
+| `ibx dns hosts` | `record:host` | 主机记录 (含 IP+MAC) | `--name`, `--ipv4addr`, `--mac`, `--zone`, `--view`, `--regex` |
 | `ibx dns all-records` | `allrecords` | 区域内所有记录聚合 | `--zone` (必填), `--view`, `--type` |
 
 **说明:**

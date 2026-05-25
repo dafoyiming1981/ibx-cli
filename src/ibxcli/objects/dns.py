@@ -146,7 +146,7 @@ class HostRecordHandler(ObjectHandler):
     display_name = "Host Records"
     default_return_fields = ["name", "ipv4addrs", "view", "comment", "EONID"]
 
-    def build_search_filters(self, name=None, ipv4addr=None, mac=None, view=None, regex=False):
+    def build_search_filters(self, name=None, ipv4addr=None, mac=None, zone=None, view=None, regex=False):
         filters = {}
         if name:
             filters["name~" if regex else "name"] = name
@@ -154,6 +154,8 @@ class HostRecordHandler(ObjectHandler):
             filters["ipv4addr"] = ipv4addr
         if mac:
             filters["mac"] = mac
+        if zone:
+            filters["zone"] = zone
         if view:
             filters["view"] = view
         return filters
