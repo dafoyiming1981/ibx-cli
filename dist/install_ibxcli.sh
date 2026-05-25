@@ -403,9 +403,9 @@ class QueryExecutor:
         if params.limit and len(records) > params.limit:
             records = records[:params.limit]
 
-        if params.return_fields:
-            fields = params.return_fields
-        elif records:
+        if records:
+            # Use actual WAPI key order for columns so headers align with values.
+            # The return_fields list controls what the API fetches, not display order.
             fields = list(records[0].keys())
         else:
             fields = []
