@@ -2,114 +2,132 @@
 
 Infoblox NIOS CLI toolset for DNS/DHCP management via WAPI.
 
-## RHEL 8 安装手册 (venv 方式)
+## 安装方法
 
-### 前置条件
+按推荐程度排列，选最适合你环境的一种。
 
-- RHEL 8 操作系统
-- 可访问 Infoblox Grid Master 的网络
-- 具有 sudo 权限的用户
+### 方法一: install_ibxcli.sh (推荐 — 适合 copy/paste 环境)
 
-### 第一步: 安装 Python 3.9+
+适用于无法直接执行 git clone 的受限环境（如 RHEL 8，只能通过 copy/paste 传代码）。
 
-RHEL 8 默认 Python 为 3.6（已 EOL），需要从 AppStream 安装 Python 3.9：
+**步骤:**
+
+1. 在构建主机上，复制脚本内容：
+   ```bash
+   cat dist/install_ibxcli.sh
+   ```
+
+2. 将脚本完整内容 copy/paste 到目标服务器，保存为 `install_ibxcli.sh`
+
+3. 执行安装：
+   ```bash
+   bash install_ibxcli.sh
+   ```
+
+4. 添加别名到 `~/.bashrc`：
+   ```bash
+   echo 'alias ibx="$HOME/.local/bin/ibx"' >> ~/.bashrc
+   source ~/.bashrc
+   ```
+
+5. 验证安装：
+   ```bash
+   ibx --version
+   ```
+
+安装路径: `~/.local/ibxcli/`（可通过 `IBX_INSTALL_DIR` 环境变量自定义）
+
+**前置条件:**
+- Python 3.12 已安装
+- 可访问 pip 源（脚本内默认使用内部镜像，需修改 `your-internal-pip-mirror`）
+
+### 方法二: git clone + pip install (推荐 — 有网络访问)
+
+适用于可直接访问 GitHub 的环境。
 
 ```bash
-# 检查可用的 Python 流
-sudo dnf module list python39
-
-# 安装 Python 3.9
-sudo dnf module install python39 -y
-
-# 确认版本
-python3.9 --version
+cd /tmp
+git clone https://github.com/dafoyiming1981/ibx-cli.git
+cd ibx-cli
+pip3.12 install --user -e .
 ```
 
-### 第二步: 上传安装包到测试环境
-
-从构建主机将 whl 文件传输到 RHEL 8 测试主机：
-
+验证：
 ```bash
-# 在构建主机上执行
-scp ibx-cli/dist/ibx_cli-0.1.0-py3-none-any.whl user@rhel8-test:/tmp/
-```
-
-或直接拷贝整个目录（含源码）：
-
-```bash
-tar czf ibx-cli.tar.gz ibx-cli/
-scp ibx-cli.tar.gz user@rhel8-test:/tmp/
-ssh user@rhel8-test "cd /tmp && tar xzf ibx-cli.tar.gz"
-```
-
-### 第三步: 创建 venv 并安装
-
-```bash
-# SSH 到 RHEL 8 测试主机
-ssh user@rhel8-test
-
-# 创建 Python 虚拟环境
-python3.9 -m venv ~/ibx-env
-
-# 激活虚拟环境
-source ~/ibx-env/bin/activate
-
-# 验证 pip 版本
-pip --version
-
-# 安装 ibx-cli
-pip install /tmp/ibx_cli-0.1.0-py3-none-any.whl
-
-# 验证安装
 ibx --version
 ```
 
-### 第四步: 配置 Infoblox 连接
+### 方法三: venv + wheel (传统方式)
+
+适用于需要隔离环境或离线安装的场景。
+
+```bash
+# 在构建主机上打包
+cd ibx-cli
+python3.12 -m pip wheel . -w dist/
+tar czf ibx-cli.tar.gz ibx-cli/
+
+# 传输到目标主机
+scp ibx-cli.tar.gz user@target:/tmp/
+
+# 在目标主机上安装
+ssh user@target
+cd /tmp && tar xzf ibx-cli.tar.gz
+python3.12 -m venv ~/ibx-env
+source ~/ibx-env/bin/activate
+pip install /tmp/ibx-cli/dist/ibx_cli-0.1.0-py3-none-any.whl
+```
+
+### RHEL 8 安装 Python 3.9+
+
+如果系统默认 Python 版本过低（RHEL 8 默认 3.6），需先升级：
+
+```bash
+sudo dnf module list python39
+sudo dnf module install python39 -y
+python3.9 --version
+```
+
+---
+
+## 配置
+
+### 快速开始
 
 ```bash
 # 生成示例配置文件
 ibx config init
 
-# 编辑配置文件
+# 编辑配置（填入 Infoblox 连接信息）
 vi ~/.infoblox/config
-```
 
-编辑 `~/.infoblox/config`，填入实际的 Infoblox 地址和凭据：
-
-```yaml
-defaults:
-  host: 10.x.x.x          # 替换为你的 Infoblox Grid Master IP
-  username: admin          # 替换为你的用户名
-  password: your_password  # 替换为你的密码
-  wapi_version: "2.13"
-  ssl_verify: false        # 自签名证书设为 false
-  timeout: 30
-  max_results: 1000
-```
-
-设置配置文件权限（保护密码）：
-
-```bash
+# 保护配置文件（限制权限）
 chmod 600 ~/.infoblox/config
 ```
 
-### 第五步: 验证连接
+### 配置文件格式 (~/.infoblox/config)
 
-```bash
-# 测试到 Infoblox 的连接
-ibx config test-connection
+```yaml
+defaults:
+  host: 10.x.x.x             # Infoblox Grid Master IP 或 hostname
+  username: admin             # API 用户名
+  password: your_password     # API 密码
+  wapi_version: "2.13"
+  ssl_verify: false           # 自签名证书设为 false
+  timeout: 30
+  max_results: 1000
+
+profiles:
+  prod:
+    host: infoblox-prod.example.com
+    username: prod-admin
+  lab:
+    host: infoblox-lab.example.com
+    username: lab-admin
+    ssl_verify: false
 ```
 
-成功输出示例：
-
-```
-Connecting to 10.x.x.x...
-Connected successfully!
-  Grid: infoblox-grid
-  WAPI version: 2.13
-```
-
-### 可选: 使用环境变量（不写配置文件）
+### 环境变量 (可替代配置文件)
 
 ```bash
 export IBX_HOST=10.x.x.x
@@ -120,198 +138,163 @@ export IBX_PASSWORD=your_password
 ibx dns zones
 ```
 
-### 退出 venv
-
-```bash
-deactivate
-```
-
-### 下次使用时快速启动
-
-```bash
-source ~/ibx-env/bin/activate
-ibx dns zones
-```
-
----
-
-## 通用安装（开发模式）
-
-```bash
-cd ibx-cli
-pip install -e .
-```
-
-## Configuration
-
-### Quick start
-
-```bash
-ibx config init
-# Edit ~/.infoblox/config with your Infoblox credentials
-```
-
-### Config file format (~/.infoblox/config)
-
-```yaml
-defaults:
-  host: infoblox.example.com
-  username: admin
-  wapi_version: "2.13"
-  ssl_verify: false
-  timeout: 30
-  max_results: 1000
-
-profiles:
-  prod:
-    host: infoblox-prod.example.com
-  lab:
-    host: infoblox-lab.example.com
-    ssl_verify: false
-```
-
-### Environment variables (alternative)
-
-```bash
-export IBX_HOST=infoblox.example.com
-export IBX_USERNAME=admin
-export IBX_PASSWORD=your_password
-```
-
-### CLI flags (highest priority)
+### CLI 参数 (最高优先级)
 
 ```bash
 ibx --host 10.0.0.2 --username admin --password secret dns zones
 ```
 
-## Usage
+### 配置优先级
 
-### DNS Commands
+CLI 参数 > 环境变量 > 当前 profile > 配置文件 defaults > 硬编码默认值
+
+---
+
+## 使用指南
+
+### 验证连接
 
 ```bash
-# List all A records
+ibx config test-connection
+```
+
+成功输出：
+```
+Connecting to 10.x.x.x...
+Connected successfully!
+  Grid: infoblox-grid
+  WAPI version: 2.13
+```
+
+### DNS 命令
+
+```bash
+# 列出所有 A 记录
 ibx dns a
 
-# Filter by name (supports --regex)
+# 按名称过滤 (支持 --regex)
 ibx dns a --name "www.example.com"
 
-# Search within a zone
-ibx dns a --zone "example.com" --view "internal"
+# 在指定 zone 内搜索
+ibx dns a --zone "srv.lab.ms.com.cn" --view "default"
 
-# List all records in a zone
+# 列出 zone 内所有记录类型
 ibx dns all-records --zone "example.com"
 
-# List authoritative zones
+# 列出授权 zone
 ibx dns zones --view "default"
 
-# List host records
+# 列出主机记录
 ibx dns hosts --name "server1"
 
-# Other record types
+# 其他记录类型
 ibx dns cname --name "alias"
 ibx dns mx --zone "example.com"
 ibx dns txt --name "_dmarc"
 ibx dns ptr --ipv4addr "10.0.0.1"
 ibx dns aaaa --name "ipv6host"
+ibx dns ns --zone "example.com"
 ```
 
-### DHCP Commands
+### DHCP 命令
 
 ```bash
-# List IPv4 networks
+# 列出 IPv4 网络
 ibx dhcp networks
 
-# Filter by CIDR
+# 按 CIDR 过滤
 ibx dhcp networks --network "10.0.0.0/24"
 
-# List fixed addresses
+# 列出固定地址 (DHCP reservation)
 ibx dhcp fixed-address --mac "00:11:22:33:44:55"
 
-# List DHCP leases
+# 列出 DHCP 租约
 ibx dhcp leases --state active --limit 50
 
-# List IPv4 address usage
+# 列出 IPv4 地址使用情况
 ibx dhcp ipv4-addresses --network "10.0.0.0/24" --status used
 
-# List IPv6 networks
+# 列出 IPv6 网络
 ibx dhcp ipv6-networks
 
-# List network containers
+# 列出网络容器
 ibx dhcp containers
 ```
 
-### Infrastructure Commands
+### 基础设施命令
 
 ```bash
-# Show grid properties
+# 显示 Grid 属性
 ibx infra grid
 
-# List grid members
+# 列出 Grid 成员
 ibx infra members
 
-# List DNS views
+# 列出 DNS 视图
 ibx infra views
 
-# List network views
+# 列出网络视图
 ibx infra network-views
 ```
 
-### Global Search
+### 全局搜索
 
 ```bash
-# Search by address
+# 按地址搜索
 ibx search "10.0.0.5" --by address
 
-# Search by FQDN
+# 按 FQDN 搜索
 ibx search "www.example.com" --by fqdn
 
-# Limit to specific type
+# 限制搜索类型
 ibx search "10.0.0.1" --type record:a
 ```
 
-### Output Options (available on every query command)
+### 输出选项 (所有查询命令可用)
 
 ```bash
-# JSON output (pipe to jq)
+# JSON 输出 (可管道到 jq)
 ibx dns a --format json | jq '.[].name'
 
-# CSV output
+# CSV 输出
 ibx dns a --format csv > records.csv
 
-# Custom fields
+# 自定义显示字段
 ibx dns a --fields name,ipv4addr,comment
 
-# Limit results
+# 限制结果数量
 ibx dns a --limit 10
 
-# Sort by field
+# 按字段排序
 ibx dhcp networks --sort network
 ```
 
-### Config Management
+### 配置管理
 
 ```bash
-# Show resolved config (password masked)
+# 显示当前解析后的配置 (密码已掩码)
 ibx config show
 
-# Test connection
+# 测试连接
 ibx --host 10.0.0.2 --username admin --password secret config test-connection
 
-# Use a named profile
+# 使用命名 profile
 ibx --profile prod dns zones
 ```
 
-## Supported WAPI Version
+---
 
-NIOS 9.0.8 -> WAPI v2.13.x
+## 支持的 WAPI 版本
 
-## Architecture
+NIOS 9.0.8 → WAPI v2.13.x
+
+## 架构
 
 ```
-CLI (click) -> ObjectHandler -> QueryExecutor -> IbxClient -> infoblox_client -> WAPI
+CLI (click) → ObjectHandler → QueryExecutor → IbxClient → infoblox_client → WAPI
 ```
 
-- **ObjectHandler**: Registry pattern - each NIOS object type has a handler class that defines default fields and translates CLI args to WAPI search filters
-- **QueryExecutor**: Builds queries, applies pagination, handles server/client-side filtering
-- **IbxClient**: Thin wrapper around `infoblox_client.connector.Connector`
+- **ObjectHandler**: 注册表模式 — 每个 NIOS 对象类型有一个 handler 类，定义默认字段并将 CLI 参数翻译为 WAPI 搜索过滤器
+- **QueryExecutor**: 构建查询、应用分页、处理服务端/客户端过滤和排序
+- **IbxClient**: `infoblox_client.connector.Connector` 的轻量封装
 - **Formatters**: table (Rich), json, csv
