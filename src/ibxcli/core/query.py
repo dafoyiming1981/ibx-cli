@@ -12,7 +12,7 @@ class QueryParams:
     obj_type: str
     search_filters: dict = field(default_factory=dict)
     return_fields: list[str] = field(default_factory=list)
-    limit: int = 100
+    limit: int | None = None
     sort_by: str | None = None
 
 

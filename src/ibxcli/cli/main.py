@@ -22,7 +22,7 @@ def output_options(f):
     """Decorator adding --format, --fields, --limit, --sort to a command."""
     f = click.option("--format", "output_format", type=click.Choice(["table", "json", "csv"]), default="table", help="Output format")(f)
     f = click.option("--fields", help="Comma-separated fields to display")(f)
-    f = click.option("--limit", type=int, default=100, show_default=True, help="Max rows to display")(f)
+    f = click.option("--limit", type=int, default=None, help="Max rows to display (default: all)")(f)
     f = click.option("--sort", help="Sort results by field")(f)
     return f
 
