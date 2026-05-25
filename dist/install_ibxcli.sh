@@ -1579,7 +1579,7 @@ from ibxcli.objects.base import ObjectHandler
 class GridHandler(ObjectHandler):
     obj_type = "grid"
     display_name = "Grid"
-    default_return_fields = ["name", "members"]
+    default_return_fields = ["name", "comment"]
 
     def build_search_filters(self):
         return {}
