@@ -523,7 +523,7 @@ def output_options(f):
     """Decorator adding --format, --fields, --limit, --sort to a command."""
     f = click.option("--format", "output_format", type=click.Choice(["table", "json", "csv"]), default="table", help="Output format")(f)
     f = click.option("--fields", help="Comma-separated fields to display")(f)
-    f = click.option("--limit", type=int, default=100, show_default=True, help="Max rows to display")(f)
+    f = click.option("--limit", type=int, default=None, help="Max rows to display (default: all)")(f)
     f = click.option("--sort", help="Sort results by field")(f)
     return f
 
@@ -1004,7 +1004,7 @@ class QueryParams:
     obj_type: str
     search_filters: dict = field(default_factory=dict)
     return_fields: list[str] = field(default_factory=list)
-    limit: int = 100
+    limit: int | None = None
     sort_by: str | None = None
 
 
