@@ -771,6 +771,8 @@ class IbxClient:
             kwargs["return_fields"] = return_fields
         kwargs["max_results"] = max_results or self._max_results
 
+        kwargs["paging"] = True
+
         try:
             result = self._connector.get_object(
                 obj_type, search_fields or {}, **kwargs
