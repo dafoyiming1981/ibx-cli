@@ -1590,7 +1590,7 @@ class GridHandler(ObjectHandler):
 class MemberHandler(ObjectHandler):
     obj_type = "member"
     display_name = "Grid Members"
-    default_return_fields = ["host_name", "ipv4addr", "platform", "status", "services"]
+    default_return_fields = ["host_name", "ipv4addr", "platform", "status", "ha_status", "services"]
 
     def build_search_filters(self, host_name=None, service_state=None):
         filters = {}
