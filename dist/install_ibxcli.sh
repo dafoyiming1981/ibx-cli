@@ -62,11 +62,6 @@ mkdir -p "$BIN_DIR"
 # ===== ibxcli/__init__.py =====
 cat > "$SRC_DIR/__init__.py" << 'PYEOF'
 __version__ = "0.1.0"
-
-import warnings
-from urllib3.exceptions import InsecureRequestWarning
-
-warnings.filterwarnings("ignore", category=InsecureRequestWarning)
 PYEOF
 
 # ===== ibxcli/__main__.py =====
