@@ -22,6 +22,6 @@ class TableFormatter(BaseFormatter):
             table.add_row(*[str(record.get(c, "")) for c in cols])
 
         f = io.StringIO()
-        c = Console(file=f, force_terminal=True, width=160)
+        c = Console(file=f, width=160, force_terminal=False)
         c.print(table)
         return f.getvalue()
