@@ -1,5 +1,7 @@
 """CSV formatter."""
 
+from __future__ import annotations
+
 import csv
 import io
 from ibxcli.formatters.base import BaseFormatter, register_formatter

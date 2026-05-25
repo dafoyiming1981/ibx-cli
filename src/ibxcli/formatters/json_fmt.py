@@ -1,5 +1,7 @@
 """JSON formatter."""
 
+from __future__ import annotations
+
 import json
 from ibxcli.formatters.base import BaseFormatter, register_formatter
 

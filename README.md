@@ -196,6 +196,28 @@ ibx dns aaaa --name "ipv6host"
 ibx dns ns --zone "example.com"
 ```
 
+### 支持的 DNS 记录类型
+
+| 命令 | WAPI 对象 | 说明 | 支持的过滤参数 |
+|------|-----------|------|----------------|
+| `ibx dns zones` | `zone_auth` | 权威区域 | `--view`, `--fqdn`, `--regex` |
+| `ibx dns a` | `record:a` | A 记录 (IPv4) | `--name`, `--ipv4addr`, `--zone`, `--view`, `--regex` |
+| `ibx dns aaaa` | `record:aaaa` | AAAA 记录 (IPv6) | `--name`, `--ipv6addr`, `--zone`, `--view`, `--regex` |
+| `ibx dns cname` | `record:cname` | CNAME 别名记录 | `--name`, `--canonical`, `--zone`, `--view`, `--regex` |
+| `ibx dns mx` | `record:mx` | 邮件交换记录 | `--name`, `--zone`, `--view`, `--regex` |
+| `ibx dns ns` | `record:ns` | 名称服务器记录 | `--name`, `--zone`, `--view`, `--regex` |
+| `ibx dns txt` | `record:txt` | 文本记录 (SPF/DKIM 等) | `--name`, `--zone`, `--view`, `--regex` |
+| `ibx dns ptr` | `record:ptr` | 反向解析记录 | `--name`, `--ipv4addr`, `--ipv6addr`, `--zone`, `--view`, `--regex` |
+| `ibx dns hosts` | `record:host` | 主机记录 (含 IP+MAC) | `--name`, `--ipv4addr`, `--mac`, `--view`, `--regex` |
+| `ibx dns all-records` | `allrecords` | 区域内所有记录聚合 | `--zone` (必填), `--view`, `--type` |
+
+**说明:**
+
+- `--regex` 标志可将 `--name` / `--fqdn` 参数从精确匹配切换为正则表达式匹配
+- `all-records` 命令通过 `--type` 参数可过滤 WAPI 支持的任意记录类型（如 SRV、CAA、NAPTR 等），但这些类型暂无专用 CLI 命令
+- 所有记录均支持 `--format`（json/csv/table）、`--fields`（自定义显示列）、`--limit`（限制结果数）等全局输出选项
+- `EONID` 为自定义扩展属性（extensible attribute），已加入所有 DNS 记录的默认返回字段
+
 ### DHCP 命令
 
 ```bash

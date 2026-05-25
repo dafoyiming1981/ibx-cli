@@ -1,5 +1,7 @@
 """Rich table formatter."""
 
+from __future__ import annotations
+
 import io
 from rich.console import Console
 from rich.table import Table
