@@ -395,11 +395,25 @@ class QueryExecutor:
         """Execute the query and apply post-processing."""
         search = dict(params.search_filters)
 
+        # Ensure extattrs is requested so we can extract eonid
+        return_fields = list(params.return_fields) if params.return_fields else []
+        if return_fields and "extattrs" not in return_fields:
+            return_fields.append("extattrs")
+
         records = self._client.get(
             obj_type=params.obj_type,
             search_fields=search,
-            return_fields=params.return_fields or None,
+            return_fields=return_fields or None,
         )
+
+        # Post-process: extract eonid from extattrs, remove _ref and extattrs
+        for record in records:
+            extattrs = record.pop("extattrs", None)
+            if extattrs and "eonid" in extattrs:
+                record["eonid"] = extattrs["eonid"].get("value", "")
+            else:
+                record["eonid"] = ""
+            record.pop("_ref", None)
 
         # Client-side sorting (avoids WAPI _sort compatibility issues)
         if params.sort_by:
@@ -408,9 +422,12 @@ class QueryExecutor:
         if params.limit and len(records) > params.limit:
             records = records[:params.limit]
 
-        if records:
-            # Use actual WAPI key order for columns so headers align with values.
-            # The return_fields list controls what the API fetches, not display order.
+        # Build display fields from handler defaults, removing _ref and adding eonid
+        if params.return_fields:
+            fields = [f for f in params.return_fields if f != "_ref"]
+            if "eonid" not in fields:
+                fields.append("eonid")
+        elif records:
             fields = list(records[0].keys())
         else:
             fields = []
@@ -612,7 +629,7 @@ from ibxcli.objects.base import ObjectHandler
 class AuthZoneHandler(ObjectHandler):
     obj_type = "zone_auth"
     display_name = "Authoritative Zones"
-    default_return_fields = ["fqdn", "view", "zone_format", "comment"]
+    default_return_fields = ["fqdn", "view", "zone_format", "comment", "eonid"]
 
     def build_search_filters(self, view=None, fqdn=None, regex=False):
         filters = {}
@@ -626,7 +643,7 @@ class AuthZoneHandler(ObjectHandler):
 class ARecordHandler(ObjectHandler):
     obj_type = "record:a"
     display_name = "A Records"
-    default_return_fields = ["name", "ipv4addr", "view", "zone", "ttl", "comment"]
+    default_return_fields = ["name", "ipv4addr", "view", "zone", "ttl", "comment", "eonid"]
 
     def build_search_filters(self, name=None, ipv4addr=None, zone=None, view=None, regex=False):
         filters = {}
@@ -644,7 +661,7 @@ class ARecordHandler(ObjectHandler):
 class AAAARecordHandler(ObjectHandler):
     obj_type = "record:aaaa"
     display_name = "AAAA Records"
-    default_return_fields = ["name", "ipv6addr", "view", "zone", "ttl", "comment"]
+    default_return_fields = ["name", "ipv6addr", "view", "zone", "ttl", "comment", "eonid"]
 
     def build_search_filters(self, name=None, ipv6addr=None, zone=None, view=None, regex=False):
         filters = {}
@@ -662,7 +679,7 @@ class AAAARecordHandler(ObjectHandler):
 class CNAMERecordHandler(ObjectHandler):
     obj_type = "record:cname"
     display_name = "CNAME Records"
-    default_return_fields = ["name", "canonical", "view", "zone", "ttl", "comment"]
+    default_return_fields = ["name", "canonical", "view", "zone", "ttl", "comment", "eonid"]
 
     def build_search_filters(self, name=None, canonical=None, zone=None, view=None, regex=False):
         filters = {}
@@ -680,7 +697,7 @@ class CNAMERecordHandler(ObjectHandler):
 class MXRecordHandler(ObjectHandler):
     obj_type = "record:mx"
     display_name = "MX Records"
-    default_return_fields = ["name", "mail_exchanger", "preference", "view", "zone", "ttl"]
+    default_return_fields = ["name", "mail_exchanger", "preference", "view", "zone", "ttl", "eonid"]
 
     def build_search_filters(self, name=None, zone=None, view=None, regex=False):
         filters = {}
@@ -696,7 +713,7 @@ class MXRecordHandler(ObjectHandler):
 class NSRecordHandler(ObjectHandler):
     obj_type = "record:ns"
     display_name = "NS Records"
-    default_return_fields = ["name", "nameserver", "view", "zone", "ttl"]
+    default_return_fields = ["name", "nameserver", "view", "zone", "ttl", "eonid"]
 
     def build_search_filters(self, name=None, zone=None, view=None, regex=False):
         filters = {}
@@ -712,7 +729,7 @@ class NSRecordHandler(ObjectHandler):
 class TXTRecordHandler(ObjectHandler):
     obj_type = "record:txt"
     display_name = "TXT Records"
-    default_return_fields = ["name", "text", "view", "zone", "ttl", "comment"]
+    default_return_fields = ["name", "text", "view", "zone", "ttl", "comment", "eonid"]
 
     def build_search_filters(self, name=None, zone=None, view=None, regex=False):
         filters = {}
@@ -728,7 +745,7 @@ class TXTRecordHandler(ObjectHandler):
 class PTRRecordHandler(ObjectHandler):
     obj_type = "record:ptr"
     display_name = "PTR Records"
-    default_return_fields = ["name", "ptrdname", "ipv4addr", "ipv6addr", "view", "zone", "ttl"]
+    default_return_fields = ["name", "ptrdname", "ipv4addr", "ipv6addr", "view", "zone", "ttl", "eonid"]
 
     def build_search_filters(self, name=None, ipv4addr=None, ipv6addr=None, zone=None, view=None, regex=False):
         filters = {}
@@ -748,7 +765,7 @@ class PTRRecordHandler(ObjectHandler):
 class HostRecordHandler(ObjectHandler):
     obj_type = "record:host"
     display_name = "Host Records"
-    default_return_fields = ["name", "ipv4addrs", "view", "comment"]
+    default_return_fields = ["name", "ipv4addrs", "view", "comment", "eonid"]
 
     def build_search_filters(self, name=None, ipv4addr=None, mac=None, view=None, regex=False):
         filters = {}
@@ -766,7 +783,7 @@ class HostRecordHandler(ObjectHandler):
 class AllRecordsHandler(ObjectHandler):
     obj_type = "allrecords"
     display_name = "All Records"
-    default_return_fields = ["name", "type", "address", "view", "zone", "ttl"]
+    default_return_fields = ["name", "type", "address", "view", "zone", "ttl", "eonid"]
 
     def build_search_filters(self, zone=None, view=None, type=None, regex=False):
         filters = {}

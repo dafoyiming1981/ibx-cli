@@ -48,11 +48,25 @@ class QueryExecutor:
         """Execute the query and apply post-processing."""
         search = dict(params.search_filters)
 
+        # Ensure extattrs is requested so we can extract eonid
+        return_fields = list(params.return_fields) if params.return_fields else []
+        if return_fields and "extattrs" not in return_fields:
+            return_fields.append("extattrs")
+
         records = self._client.get(
             obj_type=params.obj_type,
             search_fields=search,
-            return_fields=params.return_fields or None,
+            return_fields=return_fields or None,
         )
+
+        # Post-process: extract eonid from extattrs, remove _ref and extattrs
+        for record in records:
+            extattrs = record.pop("extattrs", None)
+            if extattrs and "eonid" in extattrs:
+                record["eonid"] = extattrs["eonid"].get("value", "")
+            else:
+                record["eonid"] = ""
+            record.pop("_ref", None)
 
         # Client-side sorting (avoids WAPI _sort compatibility issues)
         if params.sort_by:
@@ -61,9 +75,12 @@ class QueryExecutor:
         if params.limit and len(records) > params.limit:
             records = records[:params.limit]
 
-        if records:
-            # Use actual WAPI key order for columns so headers align with values.
-            # The return_fields list controls what the API fetches, not display order.
+        # Build display fields from handler defaults, removing _ref and adding eonid
+        if params.return_fields:
+            fields = [f for f in params.return_fields if f != "_ref"]
+            if "eonid" not in fields:
+                fields.append("eonid")
+        elif records:
             fields = list(records[0].keys())
         else:
             fields = []
