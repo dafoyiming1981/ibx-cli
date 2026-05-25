@@ -1058,6 +1058,10 @@ class QueryExecutor:
             else:
                 record["EONID"] = ""
             record.pop("_ref", None)
+            # Flatten ipv4addrs: [{"_ref": "...", "ipv4addr": "10.0.0.1", ...}] → ["10.0.0.1"]
+            ipv4addrs = record.get("ipv4addrs")
+            if isinstance(ipv4addrs, list) and ipv4addrs and isinstance(ipv4addrs[0], dict):
+                record["ipv4addrs"] = [a.get("ipv4addr", "") for a in ipv4addrs]
 
         # Client-side sorting (avoids WAPI _sort compatibility issues)
         if params.sort_by:
