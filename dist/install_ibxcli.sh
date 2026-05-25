@@ -395,15 +395,16 @@ class QueryExecutor:
         """Execute the query and apply post-processing."""
         search = dict(params.search_filters)
 
-        # Ensure extattrs is requested so we can extract EONID
-        return_fields = list(params.return_fields) if params.return_fields else []
-        if return_fields and "extattrs" not in return_fields:
-            return_fields.append("extattrs")
+        # Build API return_fields: strip EONID (it's an extensible attribute, not a WAPI field)
+        # but keep it for display. Always request extattrs to extract EONID.
+        api_fields = [f for f in params.return_fields if f != "EONID"] if params.return_fields else []
+        if api_fields and "extattrs" not in api_fields:
+            api_fields.append("extattrs")
 
         records = self._client.get(
             obj_type=params.obj_type,
             search_fields=search,
-            return_fields=return_fields or None,
+            return_fields=api_fields or None,
         )
 
         # Post-process: extract EONID from extattrs, remove _ref and extattrs
