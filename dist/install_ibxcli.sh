@@ -1041,9 +1041,10 @@ class QueryExecutor:
         search = dict(params.search_filters)
 
         # Build API return_fields: strip EONID (it's an extensible attribute, not a WAPI field)
-        # but keep it for display. Always request extattrs to extract EONID.
+        # Only request extattrs when EONID is in the handler's default fields (DNS records).
+        has_eonid = "EONID" in (params.return_fields or [])
         api_fields = [f for f in params.return_fields if f != "EONID"] if params.return_fields else []
-        if api_fields and "extattrs" not in api_fields:
+        if has_eonid and api_fields and "extattrs" not in api_fields:
             api_fields.append("extattrs")
 
         records = self._client.get(
@@ -1052,13 +1053,14 @@ class QueryExecutor:
             return_fields=api_fields or None,
         )
 
-        # Post-process: extract EONID from extattrs, remove _ref and extattrs
+        # Post-process: extract EONID from extattrs (DNS only), remove _ref and extattrs
         for record in records:
-            extattrs = record.pop("extattrs", None)
-            if extattrs and "EONID" in extattrs:
-                record["EONID"] = extattrs["EONID"].get("value", "")
-            else:
-                record["EONID"] = ""
+            if has_eonid:
+                extattrs = record.pop("extattrs", None)
+                if extattrs and "EONID" in extattrs:
+                    record["EONID"] = extattrs["EONID"].get("value", "")
+                else:
+                    record["EONID"] = ""
             record.pop("_ref", None)
             # Flatten ipv4addrs: [{"_ref": "...", "ipv4addr": "10.0.0.1", ...}] → ["10.0.0.1"]
             ipv4addrs = record.get("ipv4addrs")
@@ -1072,10 +1074,10 @@ class QueryExecutor:
         if params.limit and len(records) > params.limit:
             records = records[:params.limit]
 
-        # Build display fields from handler defaults, removing _ref and ensuring EONID
+        # Build display fields from handler defaults, removing _ref
         if params.return_fields:
             fields = [f for f in params.return_fields if f != "_ref"]
-            if "EONID" not in fields:
+            if has_eonid and "EONID" not in fields:
                 fields.append("EONID")
         elif records:
             fields = list(records[0].keys())
