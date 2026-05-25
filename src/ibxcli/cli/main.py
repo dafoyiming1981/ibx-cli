@@ -38,7 +38,7 @@ def execute_and_render(ctx, obj_type, search_filters, **kwargs):
         sys.exit(1)
 
     params = ctx.obj["executor"].build_params(
-        obj_type=obj_type,
+        obj_type=handler.obj_type,
         search_filters=search_filters,
         default_fields=handler.default_return_fields,
     )

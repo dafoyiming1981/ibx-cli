@@ -5,6 +5,11 @@ from __future__ import annotations
 from typing import Any
 
 from infoblox_client import connector
+from infoblox_client.exceptions import (
+    InfobloxConnectionError,
+    InfobloxException,
+    InfobloxBadWAPICredential,
+)
 
 from ibxcli.core.config import ConnectionConfig
 from ibxcli.core.exceptions import IbxAuthError, IbxConnectionError, IbxWapiError
@@ -49,9 +54,11 @@ class IbxClient:
                 obj_type, search_fields or {}, **kwargs
             )
             return result
-        except connector.InfobloxConnectionException as e:
+        except InfobloxConnectionError as e:
             raise IbxConnectionError(f"Connection error: {e}") from e
-        except connector.InfobloxException as e:
+        except InfobloxBadWAPICredential as e:
+            raise IbxAuthError(f"Authentication failed for {self._connector.host}") from e
+        except InfobloxException as e:
             err_text = str(e)
             if "401" in err_text or "403" in err_text:
                 raise IbxAuthError(
