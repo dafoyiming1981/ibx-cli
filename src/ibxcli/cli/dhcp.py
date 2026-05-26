@@ -87,3 +87,15 @@ def ipv4_addresses(ctx, network, status, mac, name, **kwargs):
     handler = HANDLERS["ipv4address"]
     filters = handler.build_search_filters(network=network, status=status, mac=mac, name=name)
     execute_and_render(ctx, "ipv4address", filters, **kwargs)
+
+
+@dhcp.command()
+@output_options
+@click.option("--network", help="CIDR network filter (e.g., 10.0.0.0/24)")
+@click.option("--network-view", help="Network view filter")
+@click.pass_context
+def ranges(ctx, network, network_view, **kwargs):
+    """List DHCP address ranges."""
+    handler = HANDLERS["range"]
+    filters = handler.build_search_filters(network=network, network_view=network_view)
+    execute_and_render(ctx, "range", filters, **kwargs)

@@ -97,3 +97,17 @@ class IPv4AddressHandler(ObjectHandler):
         if name:
             filters["names"] = name
         return filters
+
+
+class RangeHandler(ObjectHandler):
+    obj_type = "range"
+    display_name = "DHCP Ranges"
+    default_return_fields = ["start_addr", "end_addr", "network", "comment", "VLAN", "L2", "Zone", "Site"]
+
+    def build_search_filters(self, network=None, network_view=None):
+        filters = {}
+        if network:
+            filters["network"] = network
+        if network_view:
+            filters["network_view"] = network_view
+        return filters

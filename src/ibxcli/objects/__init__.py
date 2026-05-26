@@ -8,7 +8,7 @@ from ibxcli.objects.dns import (
 )
 from ibxcli.objects.dhcp import (
     FixedAddressHandler, IPv4AddressHandler, IPv6NetworkHandler,
-    LeaseHandler, NetworkContainerHandler, NetworkHandler,
+    LeaseHandler, NetworkContainerHandler, NetworkHandler, RangeHandler,
 )
 from ibxcli.objects.infra import (
     DNSViewHandler, GridHandler, MemberHandler, NetworkViewHandler,
@@ -33,6 +33,7 @@ HANDLERS: dict[str, ObjectHandler] = {
     "fixedaddress": FixedAddressHandler(),
     "lease": LeaseHandler(),
     "ipv4address": IPv4AddressHandler(),
+    "range": RangeHandler(),
     # Infrastructure
     "grid": GridHandler(),
     "member": MemberHandler(),
