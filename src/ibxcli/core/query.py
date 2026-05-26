@@ -83,10 +83,11 @@ class QueryExecutor:
                     record["ha_status"] = "unknown"
                 record.pop("node_info", None)
             # Flatten services struct array to comma-separated service types
+            # memberservicecommunication struct fields: service_type, option (FORCE/PREFER), enable
             if "services" in params.return_fields:
                 services = record.get("services")
                 if isinstance(services, list) and services:
-                    types = [s.get("type", "") for s in services if isinstance(s, dict)]
+                    types = [s.get("service_type", "") for s in services if isinstance(s, dict)]
                     record["services"] = ", ".join(t for t in types if t)
                 elif not services:
                     record["services"] = "none"
