@@ -1093,10 +1093,11 @@ class QueryExecutor:
         search = dict(params.search_filters)
 
         # Build API return_fields: strip pseudo-fields that require post-processing
-        # EONID is an extensible attribute, not a WAPI field
-        has_eonid = "EONID" in (params.return_fields or [])
-        api_fields = [f for f in params.return_fields if f != "EONID"] if params.return_fields else []
-        if has_eonid and api_fields and "extattrs" not in api_fields:
+        # EONID, VLAN, L2, Zone, Site are extensible attributes, not WAPI fields
+        extattr_fields = {"EONID", "VLAN", "L2", "Zone", "Site"}
+        has_extattrs = [f for f in (params.return_fields or []) if f in extattr_fields]
+        api_fields = [f for f in params.return_fields if f not in extattr_fields] if params.return_fields else []
+        if has_extattrs and api_fields and "extattrs" not in api_fields:
             api_fields.append("extattrs")
 
         records = self._client.get(
@@ -1105,19 +1106,32 @@ class QueryExecutor:
             return_fields=api_fields or None,
         )
 
-        # Post-process: extract EONID from extattrs (DNS only), remove _ref and extattrs
+        # Post-process: extract extensible attributes, remove _ref and extattrs
         for record in records:
-            if has_eonid:
+            if has_extattrs:
                 extattrs = record.pop("extattrs", None)
-                if extattrs and "EONID" in extattrs:
-                    record["EONID"] = extattrs["EONID"].get("value", "")
-                else:
-                    record["EONID"] = ""
+                for ea_key in has_extattrs:
+                    if extattrs and ea_key in extattrs:
+                        record[ea_key] = extattrs[ea_key].get("value", "")
+                    else:
+                        record[ea_key] = ""
             record.pop("_ref", None)
             # Flatten ipv4addrs: [{"_ref": "...", "ipv4addr": "10.0.0.1", ...}] → ["10.0.0.1"]
             ipv4addrs = record.get("ipv4addrs")
             if isinstance(ipv4addrs, list) and ipv4addrs and isinstance(ipv4addrs[0], dict):
                 record["ipv4addrs"] = [a.get("ipv4addr", "") for a in ipv4addrs]
+            # Flatten members to comma-separated hostnames for display
+            members = record.get("members")
+            if isinstance(members, list):
+                names = []
+                for m in members:
+                    if isinstance(m, str):
+                        names.append(m)
+                    elif isinstance(m, dict):
+                        names.append(
+                            m.get("name") or m.get("host_name") or m.get("_ref", "")
+                        )
+                record["members"] = ", ".join(names) if names else ""
 
         # Client-side sorting (avoids WAPI _sort compatibility issues)
         if params.sort_by:
@@ -1129,8 +1143,9 @@ class QueryExecutor:
         # Build display fields from handler defaults, removing _ref
         if params.return_fields:
             fields = [f for f in params.return_fields if f != "_ref"]
-            if has_eonid and "EONID" not in fields:
-                fields.append("EONID")
+            for ea_key in has_extattrs:
+                if ea_key not in fields:
+                    fields.append(ea_key)
             if "node_info" in fields:
                 fields.remove("node_info")
         elif records:
@@ -1355,7 +1370,7 @@ from ibxcli.objects.base import ObjectHandler
 class NetworkHandler(ObjectHandler):
     obj_type = "network"
     display_name = "IPv4 Networks"
-    default_return_fields = ["network", "network_view", "comment", "members", "VLAN", "L2", "ZONE"]
+    default_return_fields = ["network", "network_view", "comment", "members", "VLAN", "L2", "Zone", "Site"]
 
     def build_search_filters(self, network=None, network_view=None):
         filters = {}

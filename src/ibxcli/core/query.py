@@ -50,7 +50,7 @@ class QueryExecutor:
 
         # Build API return_fields: strip pseudo-fields that require post-processing
         # EONID, VLAN, L2, ZONE are extensible attributes, not WAPI fields
-        extattr_fields = {"EONID", "VLAN", "L2", "ZONE"}
+        extattr_fields = {"EONID", "VLAN", "L2", "Zone", "Site"}
         has_extattrs = [f for f in (params.return_fields or []) if f in extattr_fields]
         api_fields = [f for f in params.return_fields if f not in extattr_fields] if params.return_fields else []
         if has_extattrs and api_fields and "extattrs" not in api_fields:
@@ -79,7 +79,14 @@ class QueryExecutor:
             # Flatten members to comma-separated hostnames for display
             members = record.get("members")
             if isinstance(members, list):
-                names = [m.get("name", m.get("_ref", "")) for m in members]
+                names = []
+                for m in members:
+                    if isinstance(m, str):
+                        names.append(m)
+                    elif isinstance(m, dict):
+                        names.append(
+                            m.get("name") or m.get("host_name") or m.get("_ref", "")
+                        )
                 record["members"] = ", ".join(names) if names else ""
 
         # Client-side sorting (avoids WAPI _sort compatibility issues)
