@@ -76,17 +76,18 @@ class QueryExecutor:
             ipv4addrs = record.get("ipv4addrs")
             if isinstance(ipv4addrs, list) and ipv4addrs and isinstance(ipv4addrs[0], dict):
                 record["ipv4addrs"] = [a.get("ipv4addr", "") for a in ipv4addrs]
-            # Flatten members to comma-separated hostnames for display
+            # Flatten members to short hostnames for display
             members = record.get("members")
             if isinstance(members, list):
                 names = []
                 for m in members:
                     if isinstance(m, str):
-                        names.append(m)
+                        short = m
                     elif isinstance(m, dict):
-                        names.append(
-                            m.get("name") or m.get("host_name") or m.get("_ref", "")
-                        )
+                        short = m.get("name") or m.get("host_name") or m.get("_ref", "")
+                    else:
+                        continue
+                    names.append(short.split(".")[0])
                 record["members"] = ", ".join(names) if names else ""
 
         # Client-side sorting (avoids WAPI _sort compatibility issues)
