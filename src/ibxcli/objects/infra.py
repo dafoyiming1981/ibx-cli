@@ -17,7 +17,7 @@ class GridHandler(ObjectHandler):
 class MemberHandler(ObjectHandler):
     obj_type = "member"
     display_name = "Grid Members"
-    default_return_fields = ["host_name", "platform", "ha_status", "services"]
+    default_return_fields = ["host_name", "platform", "node_info", "services"]
 
     def build_search_filters(self, host_name=None, service_state=None):
         filters = {}
