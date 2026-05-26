@@ -24,7 +24,7 @@ class MemberHandler(ObjectHandler):
         if host_name:
             filters["host_name"] = host_name
         if service_state:
-            filters["status"] = service_state
+            filters["node_status"] = service_state
         return filters
 
 
