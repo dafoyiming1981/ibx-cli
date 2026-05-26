@@ -102,7 +102,7 @@ class IPv4AddressHandler(ObjectHandler):
 class RangeHandler(ObjectHandler):
     obj_type = "range"
     display_name = "DHCP Ranges"
-    default_return_fields = ["start_addr", "end_addr", "network", "comment", "VLAN", "L2", "Zone", "Site"]
+    default_return_fields = ["start_addr", "end_addr", "network", "members", "comment", "VLAN", "L2", "Zone", "Site"]
 
     def build_search_filters(self, network=None, network_view=None):
         filters = {}

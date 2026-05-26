@@ -291,6 +291,20 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
             for j, col in enumerate(net_fields):
                 if j == 0:
                     row_vals.append(prefix + str(rng.get("start_addr", "")))
+                elif col == "members":
+                    val = rng.get("members", "")
+                    if isinstance(val, list):
+                        names = []
+                        for m in val:
+                            if isinstance(m, str):
+                                short = m
+                            elif isinstance(m, dict):
+                                short = m.get("name") or m.get("host_name") or m.get("_ref", "")
+                            else:
+                                continue
+                            names.append(short.split(".")[0])
+                        val = ", ".join(names) if names else ""
+                    row_vals.append(str(val))
                 elif col == "comment":
                     row_vals.append(str(rng.get("comment", "")))
                 else:
@@ -1574,7 +1588,7 @@ class IPv4AddressHandler(ObjectHandler):
 class RangeHandler(ObjectHandler):
     obj_type = "range"
     display_name = "DHCP Ranges"
-    default_return_fields = ["start_addr", "end_addr", "network", "comment", "VLAN", "L2", "Zone", "Site"]
+    default_return_fields = ["start_addr", "end_addr", "network", "members", "comment", "VLAN", "L2", "Zone", "Site"]
 
     def build_search_filters(self, network=None, network_view=None):
         filters = {}

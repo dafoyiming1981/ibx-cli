@@ -108,6 +108,20 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
             for j, col in enumerate(net_fields):
                 if j == 0:
                     row_vals.append(prefix + str(rng.get("start_addr", "")))
+                elif col == "members":
+                    val = rng.get("members", "")
+                    if isinstance(val, list):
+                        names = []
+                        for m in val:
+                            if isinstance(m, str):
+                                short = m
+                            elif isinstance(m, dict):
+                                short = m.get("name") or m.get("host_name") or m.get("_ref", "")
+                            else:
+                                continue
+                            names.append(short.split(".")[0])
+                        val = ", ".join(names) if names else ""
+                    row_vals.append(str(val))
                 elif col == "comment":
                     row_vals.append(str(rng.get("comment", "")))
                 else:
