@@ -89,6 +89,19 @@ class QueryExecutor:
                         continue
                     names.append(short.split(".")[0])
                 record["members"] = ", ".join(names) if names else ""
+            # Flatten range member assignment to short hostname
+            member = record.get("member")
+            if isinstance(member, dict):
+                short = member.get("name") or member.get("host_name", "")
+                record["member"] = short.split(".")[0] if short else ""
+            # Compute member_assignment display value
+            assoc_type = record.get("server_association_type", "NONE")
+            if assoc_type == "MEMBER":
+                record["member_assignment"] = record.get("member", "")
+            elif assoc_type == "FAILOVER":
+                record["member_assignment"] = record.get("failover_association", "")
+            else:
+                record["member_assignment"] = "None"
 
         # Client-side sorting (avoids WAPI _sort compatibility issues)
         if params.sort_by:

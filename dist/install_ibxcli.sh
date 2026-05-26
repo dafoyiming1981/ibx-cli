@@ -180,7 +180,7 @@ def test_connection(ctx):
 PYEOF
 
 # ===== ibxcli/cli/dhcp.py =====
-cat > "$SRC_DIR/cli/dhcp.py" << 'PYEOF'
+cat > "$SRC_DIR/ibxcli/cli/dhcp.py" << 'PYEOF'
 """DHCP command group."""
 
 import click
@@ -213,7 +213,7 @@ def networks(ctx, network, network_view, with_ranges, **kwargs):
 
 def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
     """Render networks with their DHCP ranges nested underneath."""
-    from ibxcli.cli.main import _ensure_client
+    from ibxcli.cli.main import _ensure_client, output_options as _output_options
     from ibxcli.formatters.base import get_formatter
     from rich.console import Console
     from rich.table import Table
@@ -270,7 +270,6 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
 
     # Render
     net_fields = net_result.fields
-    range_fields = range_result.fields or ["start_addr", "end_addr", "comment"]
     table = Table(show_header=True, header_style="bold cyan")
 
     # All columns are no_wrap for compactness
@@ -292,19 +291,15 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
                 if j == 0:
                     row_vals.append(prefix + str(rng.get("start_addr", "")))
                 elif col == "members":
-                    val = rng.get("members", "")
-                    if isinstance(val, list):
-                        names = []
-                        for m in val:
-                            if isinstance(m, str):
-                                short = m
-                            elif isinstance(m, dict):
-                                short = m.get("name") or m.get("host_name") or m.get("_ref", "")
-                            else:
-                                continue
-                            names.append(short.split(".")[0])
-                        val = ", ".join(names) if names else ""
-                    row_vals.append(str(val))
+                    # Show Member Assignment: None, member hostname, or failover association
+                    assoc_type = rng.get("server_association_type", "NONE")
+                    if assoc_type == "MEMBER":
+                        member_val = rng.get("member", "")
+                        row_vals.append(member_val if member_val else "None")
+                    elif assoc_type == "FAILOVER":
+                        row_vals.append(str(rng.get("failover_association", "")))
+                    else:
+                        row_vals.append("None")
                 elif col == "comment":
                     row_vals.append(str(rng.get("comment", "")))
                 else:
@@ -392,9 +387,7 @@ def ranges(ctx, network, network_view, **kwargs):
     handler = HANDLERS["range"]
     filters = handler.build_search_filters(network=network, network_view=network_view)
     execute_and_render(ctx, "range", filters, **kwargs)
-
 PYEOF
-
 # ===== ibxcli/cli/dns.py =====
 cat > "$SRC_DIR/cli/dns.py" << 'PYEOF'
 """DNS command group."""
@@ -1163,7 +1156,7 @@ class IbxFormatError(IbxError):
 PYEOF
 
 # ===== ibxcli/core/query.py =====
-cat > "$SRC_DIR/core/query.py" << 'PYEOF'
+cat > "$SRC_DIR/ibxcli/core/query.py" << 'PYEOF'
 """Query execution engine for ibx-cli."""
 
 from __future__ import annotations
@@ -1215,7 +1208,7 @@ class QueryExecutor:
         search = dict(params.search_filters)
 
         # Build API return_fields: strip pseudo-fields that require post-processing
-        # EONID, VLAN, L2, Zone, Site are extensible attributes, not WAPI fields
+        # EONID, VLAN, L2, ZONE are extensible attributes, not WAPI fields
         extattr_fields = {"EONID", "VLAN", "L2", "Zone", "Site"}
         has_extattrs = [f for f in (params.return_fields or []) if f in extattr_fields]
         api_fields = [f for f in params.return_fields if f not in extattr_fields] if params.return_fields else []
@@ -1255,6 +1248,19 @@ class QueryExecutor:
                         continue
                     names.append(short.split(".")[0])
                 record["members"] = ", ".join(names) if names else ""
+            # Flatten range member assignment to short hostname
+            member = record.get("member")
+            if isinstance(member, dict):
+                short = member.get("name") or member.get("host_name", "")
+                record["member"] = short.split(".")[0] if short else ""
+            # Compute member_assignment display value
+            assoc_type = record.get("server_association_type", "NONE")
+            if assoc_type == "MEMBER":
+                record["member_assignment"] = record.get("member", "")
+            elif assoc_type == "FAILOVER":
+                record["member_assignment"] = record.get("failover_association", "")
+            else:
+                record["member_assignment"] = "None"
 
         # Client-side sorting (avoids WAPI _sort compatibility issues)
         if params.sort_by:
@@ -1281,7 +1287,6 @@ class QueryExecutor:
             fields=fields,
             total_count=len(records),
         )
-
 PYEOF
 
 # ===== ibxcli/formatters/__init__.py =====
@@ -1483,7 +1488,7 @@ class ObjectHandler(ABC):
 PYEOF
 
 # ===== ibxcli/objects/dhcp.py =====
-cat > "$SRC_DIR/objects/dhcp.py" << 'PYEOF'
+cat > "$SRC_DIR/ibxcli/objects/dhcp.py" << 'PYEOF'
 """DHCP object handlers."""
 
 from __future__ import annotations
@@ -1588,7 +1593,7 @@ class IPv4AddressHandler(ObjectHandler):
 class RangeHandler(ObjectHandler):
     obj_type = "range"
     display_name = "DHCP Ranges"
-    default_return_fields = ["start_addr", "end_addr", "network", "members", "comment", "VLAN", "L2", "Zone", "Site"]
+    default_return_fields = ["start_addr", "end_addr", "network", "server_association_type", "member", "failover_association", "comment", "VLAN", "L2", "Zone", "Site"]
 
     def build_search_filters(self, network=None, network_view=None):
         filters = {}
@@ -1597,7 +1602,6 @@ class RangeHandler(ObjectHandler):
         if network_view:
             filters["network_view"] = network_view
         return filters
-
 PYEOF
 
 # ===== ibxcli/objects/dns.py =====
