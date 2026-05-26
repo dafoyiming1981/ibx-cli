@@ -16,12 +16,108 @@ def dhcp():
 @output_options
 @click.option("--network", help="CIDR network filter (e.g., 10.0.0.0/24)")
 @click.option("--network-view", help="Network view filter")
+@click.option("--with-ranges", is_flag=True, help="Show DHCP ranges under each network")
 @click.pass_context
-def networks(ctx, network, network_view, **kwargs):
+def networks(ctx, network, network_view, with_ranges, **kwargs):
     """List IPv4 networks."""
     handler = HANDLERS["network"]
     filters = handler.build_search_filters(network=network, network_view=network_view)
-    execute_and_render(ctx, "network", filters, **kwargs)
+    if with_ranges:
+        _render_networks_with_ranges(ctx, handler, filters, **kwargs)
+    else:
+        execute_and_render(ctx, "network", filters, **kwargs)
+
+
+def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
+    """Render networks with their DHCP ranges nested underneath."""
+    from ibxcli.cli.main import _ensure_client, output_options as _output_options
+    from ibxcli.formatters.base import get_formatter
+    from rich.console import Console
+    from rich.table import Table
+    import io
+    import sys
+
+    _ensure_client(ctx)
+
+    net_handler = HANDLERS["network"]
+    range_handler = HANDLERS["range"]
+
+    # Fetch networks
+    net_params = ctx.obj["executor"].build_params(
+        obj_type=net_handler.obj_type,
+        search_filters=filters,
+        default_fields=net_handler.default_return_fields,
+    )
+    fields_override = ctx.params.get("fields")
+    if fields_override:
+        net_params.return_fields = [f.strip() for f in fields_override.split(",")]
+    net_params.limit = ctx.params.get("limit", 100)
+    net_params.sort_by = ctx.params.get("sort")
+
+    try:
+        net_result = ctx.obj["executor"].execute(net_params)
+    except Exception as e:
+        Console(stderr=True).print(f"[red]Error:[/red] {e}")
+        sys.exit(1)
+
+    if not net_result.records:
+        Console(stderr=True).print("[yellow]No networks found.[/yellow]")
+        return
+
+    # Fetch ranges grouped by network CIDR
+    range_filters = range_handler.build_search_filters(network_view=ctx.params.get("network_view"))
+    range_params = ctx.obj["executor"].build_params(
+        obj_type=range_handler.obj_type,
+        search_filters=range_filters,
+        default_fields=range_handler.default_return_fields,
+    )
+    range_params.limit = None  # no limit for ranges
+    try:
+        range_result = ctx.obj["executor"].execute(range_params)
+    except Exception as e:
+        Console(stderr=True).print(f"[red]Error fetching ranges:[/red] {e}")
+        sys.exit(1)
+
+    # Index ranges by network CIDR
+    ranges_by_network = {}
+    for r in range_result.records:
+        net_cidr = r.get("network", "")
+        if net_cidr:
+            ranges_by_network.setdefault(net_cidr, []).append(r)
+
+    # Render
+    net_fields = net_result.fields
+    range_fields = range_result.fields or ["start_addr", "end_addr", "comment"]
+    table = Table(show_header=True, header_style="bold cyan")
+
+    # All columns are no_wrap for compactness
+    for col in net_fields:
+        table.add_column(col, no_wrap=True, max_width=60)
+
+    for record in net_result.records:
+        # Network row
+        table.add_row(*[str(record.get(c, "")) for c in net_fields])
+
+        # Range rows nested below
+        cidr = record.get("network", "")
+        child_ranges = ranges_by_network.get(cidr, [])
+        for i, rng in enumerate(child_ranges):
+            is_last = i == len(child_ranges) - 1
+            prefix = "└─ " if is_last else "├─ "
+            row_vals = []
+            for j, col in enumerate(net_fields):
+                if j == 0:
+                    row_vals.append(prefix + str(rng.get("start_addr", "")))
+                elif col == "comment":
+                    row_vals.append(str(rng.get("comment", "")))
+                else:
+                    row_vals.append("")
+            table.add_row(*row_vals)
+
+    out = io.StringIO()
+    c = Console(file=out, width=160, force_terminal=False)
+    c.print(table)
+    Console().print(out.getvalue(), soft_wrap=True)
 
 
 @dhcp.command()
