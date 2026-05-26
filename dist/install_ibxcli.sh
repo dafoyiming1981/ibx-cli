@@ -1074,6 +1074,14 @@ class QueryExecutor:
                 else:
                     record["ha_status"] = "unknown"
                 record.pop("node_info", None)
+            # Flatten services struct array to comma-separated service types
+            if "services" in params.return_fields:
+                services = record.get("services")
+                if isinstance(services, list) and services:
+                    types = [s.get("type", "") for s in services if isinstance(s, dict)]
+                    record["services"] = ", ".join(t for t in types if t)
+                elif not services:
+                    record["services"] = "none"
 
         # Client-side sorting (avoids WAPI _sort compatibility issues)
         if params.sort_by:
