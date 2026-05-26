@@ -271,6 +271,18 @@ def ipv4_addresses(ctx, network, status, mac, name, **kwargs):
     filters = handler.build_search_filters(network=network, status=status, mac=mac, name=name)
     execute_and_render(ctx, "ipv4address", filters, **kwargs)
 
+
+@dhcp.command()
+@output_options
+@click.option("--network", help="CIDR network filter (e.g., 10.0.0.0/24)")
+@click.option("--network-view", help="Network view filter")
+@click.pass_context
+def ranges(ctx, network, network_view, **kwargs):
+    """List DHCP address ranges."""
+    handler = HANDLERS["range"]
+    filters = handler.build_search_filters(network=network, network_view=network_view)
+    execute_and_render(ctx, "range", filters, **kwargs)
+
 PYEOF
 
 # ===== ibxcli/cli/dns.py =====
@@ -1302,7 +1314,7 @@ from ibxcli.objects.dns import (
 )
 from ibxcli.objects.dhcp import (
     FixedAddressHandler, IPv4AddressHandler, IPv6NetworkHandler,
-    LeaseHandler, NetworkContainerHandler, NetworkHandler,
+    LeaseHandler, NetworkContainerHandler, NetworkHandler, RangeHandler,
 )
 from ibxcli.objects.infra import (
     DNSViewHandler, GridHandler, MemberHandler, NetworkViewHandler,
@@ -1327,6 +1339,7 @@ HANDLERS: dict[str, ObjectHandler] = {
     "fixedaddress": FixedAddressHandler(),
     "lease": LeaseHandler(),
     "ipv4address": IPv4AddressHandler(),
+    "range": RangeHandler(),
     # Infrastructure
     "grid": GridHandler(),
     "member": MemberHandler(),
@@ -1459,6 +1472,20 @@ class IPv4AddressHandler(ObjectHandler):
             filters["mac_address"] = mac
         if name:
             filters["names"] = name
+        return filters
+
+
+class RangeHandler(ObjectHandler):
+    obj_type = "range"
+    display_name = "DHCP Ranges"
+    default_return_fields = ["start_addr", "end_addr", "network", "comment", "VLAN", "L2", "Zone", "Site"]
+
+    def build_search_filters(self, network=None, network_view=None):
+        filters = {}
+        if network:
+            filters["network"] = network
+        if network_view:
+            filters["network_view"] = network_view
         return filters
 
 PYEOF
