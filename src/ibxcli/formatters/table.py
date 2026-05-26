@@ -18,7 +18,8 @@ class TableFormatter(BaseFormatter):
         cols = fields or list(records[0].keys())
         table = Table(show_header=True, header_style="bold cyan")
         for col in cols:
-            table.add_column(col, no_wrap=True, max_width=80)
+            wrap = col == "members"
+            table.add_column(col, no_wrap=not wrap, max_width=40)
 
         for record in records:
             row_data = []
