@@ -88,7 +88,7 @@ class QueryExecutor:
                     else:
                         continue
                     names.append(short.split(".")[0])
-                record["members"] = "\n".join(names) if names else ""
+                record["members"] = ", ".join(names) if names else ""
 
         # Client-side sorting (avoids WAPI _sort compatibility issues)
         if params.sort_by:

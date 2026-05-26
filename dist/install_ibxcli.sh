@@ -1132,7 +1132,7 @@ class QueryExecutor:
                     else:
                         continue
                     names.append(short.split(".")[0])
-                record["members"] = "\n".join(names) if names else ""
+                record["members"] = ", ".join(names) if names else ""
 
         # Client-side sorting (avoids WAPI _sort compatibility issues)
         if params.sort_by:
@@ -1272,9 +1272,7 @@ class TableFormatter(BaseFormatter):
         cols = fields or list(records[0].keys())
         table = Table(show_header=True, header_style="bold cyan")
         for col in cols:
-            wrap = col == "members"
-            max_w = 20 if wrap else 80
-            table.add_column(col, no_wrap=not wrap, max_width=max_w)
+            table.add_column(col, no_wrap=True, max_width=60)
 
         for record in records:
             row_data = []
@@ -1373,7 +1371,7 @@ from ibxcli.objects.base import ObjectHandler
 class NetworkHandler(ObjectHandler):
     obj_type = "network"
     display_name = "IPv4 Networks"
-    default_return_fields = ["network", "comment", "members", "VLAN", "L2", "Zone", "Site"]
+    default_return_fields = ["network", "members", "VLAN", "L2", "Zone", "Site"]
 
     def build_search_filters(self, network=None, network_view=None):
         filters = {}
