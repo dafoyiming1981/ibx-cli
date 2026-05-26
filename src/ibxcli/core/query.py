@@ -49,8 +49,8 @@ class QueryExecutor:
         search = dict(params.search_filters)
 
         # Build API return_fields: strip pseudo-fields that require post-processing
-        # EONID, VLANID, L2, ZONE are extensible attributes, not WAPI fields
-        extattr_fields = {"EONID", "VLANID", "L2", "ZONE"}
+        # EONID, VLAN, L2, ZONE are extensible attributes, not WAPI fields
+        extattr_fields = {"EONID", "VLAN", "L2", "ZONE"}
         has_extattrs = [f for f in (params.return_fields or []) if f in extattr_fields]
         api_fields = [f for f in params.return_fields if f not in extattr_fields] if params.return_fields else []
         if has_extattrs and api_fields and "extattrs" not in api_fields:
