@@ -1040,8 +1040,8 @@ class QueryExecutor:
         """Execute the query and apply post-processing."""
         search = dict(params.search_filters)
 
-        # Build API return_fields: strip EONID (it's an extensible attribute, not a WAPI field)
-        # Only request extattrs when EONID is in the handler's default fields (DNS records).
+        # Build API return_fields: strip pseudo-fields that require post-processing
+        # EONID is an extensible attribute, not a WAPI field
         has_eonid = "EONID" in (params.return_fields or [])
         api_fields = [f for f in params.return_fields if f != "EONID"] if params.return_fields else []
         if has_eonid and api_fields and "extattrs" not in api_fields:
@@ -1074,28 +1074,6 @@ class QueryExecutor:
                 else:
                     record["ha_status"] = "unknown"
                 record.pop("node_info", None)
-            # Flatten services struct array to comma-separated service types
-            # memberservicecommunication struct fields vary by WAPI version;
-            # try known keys and fall back to all string values from first struct
-            if "services" in params.return_fields:
-                services = record.get("services")
-                if isinstance(services, list) and services:
-                    types = []
-                    for s in services:
-                        if isinstance(s, dict):
-                            val = s.get("service_type") or s.get("type") or s.get("service")
-                            if val:
-                                types.append(val)
-                            else:
-                                # fallback: extract all non-empty string values, skip _ref/_struct
-                                vals = [v for v in s.values() if isinstance(v, str) and v and not v.startswith("_")]
-                                types.extend(vals)
-                    record["services"] = ", ".join(types) if types else "none"
-                elif not services:
-                    record["services"] = "none"
-                # DEBUG: show raw structure to diagnose "unknown" issue
-                import sys
-                print(f"[DEBUG] services raw: {services!r}", file=sys.stderr)
 
         # Client-side sorting (avoids WAPI _sort compatibility issues)
         if params.sort_by:
@@ -1624,7 +1602,7 @@ class GridHandler(ObjectHandler):
 class MemberHandler(ObjectHandler):
     obj_type = "member"
     display_name = "Grid Members"
-    default_return_fields = ["host_name", "platform", "node_info", "services"]
+    default_return_fields = ["host_name", "platform", "node_info"]
 
     def build_search_filters(self, host_name=None, service_state=None):
         filters = {}
