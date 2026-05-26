@@ -1066,6 +1066,14 @@ class QueryExecutor:
             ipv4addrs = record.get("ipv4addrs")
             if isinstance(ipv4addrs, list) and ipv4addrs and isinstance(ipv4addrs[0], dict):
                 record["ipv4addrs"] = [a.get("ipv4addr", "") for a in ipv4addrs]
+            # Extract ha_status from node_info list: node_info[0].ha_status
+            if "node_info" in params.return_fields and "ha_status" not in params.return_fields:
+                node_info = record.get("node_info")
+                if isinstance(node_info, list) and node_info:
+                    record["ha_status"] = node_info[0].get("ha_status", "unknown")
+                else:
+                    record["ha_status"] = "unknown"
+                record.pop("node_info", None)
 
         # Client-side sorting (avoids WAPI _sort compatibility issues)
         if params.sort_by:
@@ -1079,6 +1087,10 @@ class QueryExecutor:
             fields = [f for f in params.return_fields if f != "_ref"]
             if has_eonid and "EONID" not in fields:
                 fields.append("EONID")
+            if "node_info" in fields:
+                fields.remove("node_info")
+                if "ha_status" not in fields:
+                    fields.append("ha_status")
         elif records:
             fields = list(records[0].keys())
         else:
@@ -1590,7 +1602,7 @@ class GridHandler(ObjectHandler):
 class MemberHandler(ObjectHandler):
     obj_type = "member"
     display_name = "Grid Members"
-    default_return_fields = ["host_name", "platform", "ha_status", "services"]
+    default_return_fields = ["host_name", "platform", "node_info", "services"]
 
     def build_search_filters(self, host_name=None, service_state=None):
         filters = {}
