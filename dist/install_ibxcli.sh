@@ -249,6 +249,7 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
 
     # Fetch ranges grouped by network CIDR
     range_filters = range_handler.build_search_filters(network_view=ctx.params.get("network_view"))
+    Console(stderr=True).print(f"[cyan]DEBUG range_filters={range_filters}[/cyan]")
     range_params = ctx.obj["executor"].build_params(
         obj_type=range_handler.obj_type,
         search_filters=range_filters,
@@ -261,6 +262,8 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
         Console(stderr=True).print(f"[red]Error fetching ranges:[/red] {e}")
         sys.exit(1)
 
+    Console(stderr=True).print(f"[cyan]DEBUG range_result count={len(range_result.records)}, fields={range_result.fields}[/cyan]")
+
     # DEBUG: dump first range to see actual fields
     if range_result.records:
         Console(stderr=True).print(f"[cyan]DEBUG range keys: {list(range_result.records[0].keys())}[/cyan]")
@@ -272,6 +275,9 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
         net_cidr = r.get("network", "")
         if net_cidr:
             ranges_by_network.setdefault(net_cidr, []).append(r)
+
+    Console(stderr=True).print(f"[cyan]DEBUG ranges_by_network keys: {list(ranges_by_network.keys())}[/cyan]")
+    Console(stderr=True).print(f"[cyan]DEBUG networks: {[r.get('network','') for r in net_result.records]}[/cyan]")
 
     # Render
     net_fields = net_result.fields
