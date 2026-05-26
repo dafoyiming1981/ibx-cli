@@ -1075,14 +1075,27 @@ class QueryExecutor:
                     record["ha_status"] = "unknown"
                 record.pop("node_info", None)
             # Flatten services struct array to comma-separated service types
-            # memberservicecommunication struct fields: service_type, option (FORCE/PREFER), enable
+            # memberservicecommunication struct fields vary by WAPI version;
+            # try known keys and fall back to all string values from first struct
             if "services" in params.return_fields:
                 services = record.get("services")
                 if isinstance(services, list) and services:
-                    types = [s.get("service_type", "") for s in services if isinstance(s, dict)]
-                    record["services"] = ", ".join(t for t in types if t)
+                    types = []
+                    for s in services:
+                        if isinstance(s, dict):
+                            val = s.get("service_type") or s.get("type") or s.get("service")
+                            if val:
+                                types.append(val)
+                            else:
+                                # fallback: extract all non-empty string values, skip _ref/_struct
+                                vals = [v for v in s.values() if isinstance(v, str) and v and not v.startswith("_")]
+                                types.extend(vals)
+                    record["services"] = ", ".join(types) if types else "none"
                 elif not services:
                     record["services"] = "none"
+                # DEBUG: show raw structure to diagnose "unknown" issue
+                import sys
+                print(f"[DEBUG] services raw: {services!r}", file=sys.stderr)
 
         # Client-side sorting (avoids WAPI _sort compatibility issues)
         if params.sort_by:
