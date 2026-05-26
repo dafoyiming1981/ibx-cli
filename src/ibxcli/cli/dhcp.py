@@ -78,6 +78,11 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
         Console(stderr=True).print(f"[red]Error fetching ranges:[/red] {e}")
         sys.exit(1)
 
+    # DEBUG: dump first range to see actual fields
+    if range_result.records:
+        Console(stderr=True).print(f"[cyan]DEBUG range keys: {list(range_result.records[0].keys())}[/cyan]")
+        Console(stderr=True).print(f"[cyan]DEBUG range[0]: {range_result.records[0]}[/cyan]")
+
     # Index ranges by network CIDR
     ranges_by_network = {}
     for r in range_result.records:
