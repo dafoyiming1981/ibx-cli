@@ -1256,10 +1256,16 @@ class TableFormatter(BaseFormatter):
         cols = fields or list(records[0].keys())
         table = Table(show_header=True, header_style="bold cyan")
         for col in cols:
-            table.add_column(col, no_wrap=True, max_width=40)
+            table.add_column(col, no_wrap=True, max_width=60)
 
         for record in records:
-            table.add_row(*[str(record.get(c, "")) for c in cols])
+            row_data = []
+            for c in cols:
+                val = record.get(c, "")
+                if isinstance(val, list):
+                    val = str(val)
+                row_data.append(str(val))
+            table.add_row(*row_data)
 
         f = io.StringIO()
         c = Console(file=f, width=160, force_terminal=False)
@@ -1349,7 +1355,7 @@ from ibxcli.objects.base import ObjectHandler
 class NetworkHandler(ObjectHandler):
     obj_type = "network"
     display_name = "IPv4 Networks"
-    default_return_fields = ["network", "network_view", "comment", "dhcp_utilization"]
+    default_return_fields = ["network", "network_view", "comment", "dhcp_utilization", "members", "VLANID", "L2", "ZONE"]
 
     def build_search_filters(self, network=None, network_view=None):
         filters = {}
