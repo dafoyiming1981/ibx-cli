@@ -439,10 +439,16 @@ PYEOF
 cat > "$SRC_DIR/cli/infra.py" << 'PYEOF'
 """Infrastructure command group."""
 
+import sys
+
 import click
+from rich.console import Console
 
 from ibxcli.cli.main import execute_and_render, output_options
+from ibxcli.core.exceptions import IbxConnectionError, IbxAuthError, IbxWapiError
 from ibxcli.objects import HANDLERS
+
+console = Console(stderr=True)
 
 
 @click.group()
@@ -462,15 +468,61 @@ def grid(ctx, **kwargs):
 
 
 @infra.command()
-@output_options
 @click.option("--host-name", help="Member hostname filter")
 @click.option("--service-state", help="Service state filter")
 @click.pass_context
 def members(ctx, host_name, service_state, **kwargs):
-    """List grid members."""
+    """List grid members with node-level HA status."""
+    from ibxcli.cli.main import _ensure_client
+
+    _ensure_client(ctx)
+
     handler = HANDLERS["member"]
     filters = handler.build_search_filters(host_name=host_name, service_state=service_state)
-    execute_and_render(ctx, "member", filters, **kwargs)
+
+    params = ctx.obj["executor"].build_params(
+        obj_type=handler.obj_type,
+        search_filters=filters,
+        default_fields=handler.default_return_fields,
+    )
+
+    try:
+        result = ctx.obj["executor"].execute(params)
+    except IbxConnectionError as e:
+        console.print(f"[red]Connection error:[/red] {e}")
+        sys.exit(1)
+    except IbxAuthError as e:
+        console.print(f"[red]Auth error:[/red] {e}")
+        sys.exit(1)
+    except IbxWapiError as e:
+        console.print(f"[red]WAPI error:[/red] {e.wapi_text or e}")
+        sys.exit(1)
+
+    if not result.records:
+        console.print("[yellow]No results found.[/yellow]")
+        return
+
+    # Render grouped table: member header + indented node rows
+    out = Console(width=160, force_terminal=False)
+    for i, record in enumerate(result.records):
+        if i > 0:
+            out.print()  # blank line between members
+
+        host = record.get("host_name", "unknown")
+        platform = record.get("platform", "")
+        header = f"[bold]{host}[/bold]"
+        if platform:
+            header += f"  [dim]platform: {platform}[/dim]"
+        out.print(header)
+
+        node_info = record.get("node_info")
+        if isinstance(node_info, list) and node_info:
+            for idx, node in enumerate(node_info):
+                ha = node.get("ha_status", "unknown")
+                color = "green" if ha.lower() == "active" else ("yellow" if ha.lower() == "passive" else "red")
+                out.print(f"  [dim]├──[/dim] [cyan]Node {idx + 1}[/cyan]  ha_status: [{color}]{ha}[/{color}]")
+        else:
+            out.print("  [dim]├──[/dim] [dim]No node info available[/dim]")
 
 
 @infra.command()
@@ -1066,14 +1118,6 @@ class QueryExecutor:
             ipv4addrs = record.get("ipv4addrs")
             if isinstance(ipv4addrs, list) and ipv4addrs and isinstance(ipv4addrs[0], dict):
                 record["ipv4addrs"] = [a.get("ipv4addr", "") for a in ipv4addrs]
-            # Extract ha_status from node_info list: node_info[0].ha_status
-            if "node_info" in params.return_fields and "ha_status" not in params.return_fields:
-                node_info = record.get("node_info")
-                if isinstance(node_info, list) and node_info:
-                    record["ha_status"] = node_info[0].get("ha_status", "unknown")
-                else:
-                    record["ha_status"] = "unknown"
-                record.pop("node_info", None)
 
         # Client-side sorting (avoids WAPI _sort compatibility issues)
         if params.sort_by:
@@ -1089,8 +1133,6 @@ class QueryExecutor:
                 fields.append("EONID")
             if "node_info" in fields:
                 fields.remove("node_info")
-                if "ha_status" not in fields:
-                    fields.append("ha_status")
         elif records:
             fields = list(records[0].keys())
         else:
