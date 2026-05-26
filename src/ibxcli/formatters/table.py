@@ -19,7 +19,8 @@ class TableFormatter(BaseFormatter):
         table = Table(show_header=True, header_style="bold cyan")
         for col in cols:
             wrap = col == "members"
-            table.add_column(col, no_wrap=not wrap, max_width=40)
+            max_w = 20 if wrap else 80
+            table.add_column(col, no_wrap=not wrap, max_width=max_w)
 
         for record in records:
             row_data = []
