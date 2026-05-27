@@ -221,12 +221,13 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
     net_handler = HANDLERS["network"]
     range_handler = HANDLERS["range"]
 
-    # Fetch networks
+    # Fetch networks with extattrs
     net_params = ctx.obj["executor"].build_params(
         obj_type=net_handler.obj_type,
         search_filters=filters,
         default_fields=net_handler.default_return_fields,
     )
+    net_params.return_fields.append("extattrs")
     net_params.limit = ctx.params.get("limit", 100)
     net_params.sort_by = ctx.params.get("sort")
 
@@ -261,16 +262,35 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
         if net_cidr:
             ranges_by_network.setdefault(net_cidr, []).append(r)
 
-    # Render: member header + tree ranges
+    # Render
     out = Console(width=160, force_terminal=False)
     for i, record in enumerate(net_result.records):
         if i > 0:
             out.print()  # blank line between members
 
         cidr = record.get("network", "")
+        net_ea = record.get("extattrs", {})
+        net_vlan = net_ea.get("VLAN", {}).get("value", "")
+        net_zone = net_ea.get("Zone", {}).get("value", "")
+        net_site = net_ea.get("Site", {}).get("value", "")
+        net_comment = record.get("comment", "")
+
+        # Build network header
         header = f"[bold]{cidr}[/bold]"
-        if record.get("comment"):
-            header += f"  [dim]{record['comment']}[/dim]"
+        header_parts = []
+        if net_comment:
+            header_parts.append(f"[dim]{net_comment}[/dim]")
+        ea_parts = []
+        if net_vlan:
+            ea_parts.append(f"VLAN: {net_vlan}")
+        if net_zone:
+            ea_parts.append(f"Zone: {net_zone}")
+        if net_site:
+            ea_parts.append(f"Site: {net_site}")
+        if ea_parts:
+            header_parts.append(f"[dim]{' | '.join(ea_parts)}[/dim]")
+        if header_parts:
+            header += f"  {'  '.join(header_parts)}"
         out.print(header)
 
         child_ranges = ranges_by_network.get(cidr, [])
@@ -302,21 +322,36 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
                 assignment = "[dim]None[/dim]"
                 tag = "[dim]NONE[/dim]"
 
-            comment = rng.get("comment", "")
-            comment_str = f"  [dim]{comment}[/dim]" if comment else ""
-
             # DDNS info
             ddns_updates = rng.get("enable_ddns")
             ddns_domain = rng.get("ddns_domainname", "")
-            ddns_str = ""
+            ddns_parts = []
             if ddns_updates is True:
-                ddns_str = f"  DDNS: [green]ON[/green]"
+                ddns_parts.append("DDNS: [green]ON[/green]")
                 if ddns_domain:
-                    ddns_str += f" [dim]({ddns_domain})[/dim]"
+                    ddns_parts[-1] += f" [dim]({ddns_domain})[/dim]"
             elif ddns_updates is False:
-                ddns_str = "  DDNS: [dim]OFF[/dim]"
+                ddns_parts.append("DDNS: [dim]OFF[/dim]")
 
-            out.print(f"  {connector} [cyan]{start} - {end}[/cyan]  {tag}  → {assignment}{comment_str}{ddns_str}")
+            # VLAN / Zone / Site (from range itself, falling back to network)
+            rng_vlan = rng.get("VLAN", "") or net_vlan
+            rng_zone = rng.get("Zone", "") or net_zone
+            rng_site = rng.get("Site", "") or net_site
+            ea_parts = []
+            if rng_vlan:
+                ea_parts.append(f"VLAN: {rng_vlan}")
+            if rng_zone:
+                ea_parts.append(f"Zone: {rng_zone}")
+            if rng_site:
+                ea_parts.append(f"Site: {rng_site}")
+
+            # Build full line
+            line = f"  {connector} [cyan]{start} - {end}[/cyan]  {tag}  → {assignment}"
+            if ddns_parts:
+                line += f"  {'  '.join(ddns_parts)}"
+            if ea_parts:
+                line += f"  [dim]{' | '.join(ea_parts)}[/dim]"
+            out.print(line)
 
 
 @dhcp.command()
@@ -1553,7 +1588,7 @@ from ibxcli.objects.base import ObjectHandler
 class NetworkHandler(ObjectHandler):
     obj_type = "network"
     display_name = "IPv4 Networks"
-    default_return_fields = ["network", "members", "VLAN", "L2", "Zone", "Site"]
+    default_return_fields = ["network", "members", "VLAN", "L2", "Zone", "Site", "comment"]
 
     def build_search_filters(self, network=None, network_view=None):
         filters = {}
