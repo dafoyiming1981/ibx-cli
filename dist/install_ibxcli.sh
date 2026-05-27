@@ -422,11 +422,17 @@ def ipv4_addresses(ctx, network, status, mac, name, **kwargs):
 @output_options
 @click.option("--network", help="CIDR network filter (e.g., 10.0.0.0/24)")
 @click.option("--network-view", help="Network view filter")
+@click.option("--vlan", multiple=True, help="VLAN filter (repeatable, e.g. --vlan 100 --vlan 200)")
+@click.option("--zone", multiple=True, help="Zone filter (repeatable)")
+@click.option("--site", multiple=True, help="Site filter (repeatable)")
 @click.pass_context
-def ranges(ctx, network, network_view, **kwargs):
+def ranges(ctx, network, network_view, vlan, zone, site, **kwargs):
     """List DHCP address ranges."""
     handler = HANDLERS["range"]
-    filters = handler.build_search_filters(network=network, network_view=network_view)
+    filters = handler.build_search_filters(
+        network=network, network_view=network_view,
+        vlan=vlan or None, zone=zone or None, site=site or None,
+    )
     execute_and_render(ctx, "range", filters, **kwargs)
 
 
