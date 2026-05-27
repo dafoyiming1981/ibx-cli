@@ -80,7 +80,9 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
             ranges_by_network.setdefault(net_cidr, []).append(r)
 
     # Render
-    out = Console(width=160, force_terminal=False)
+    import shutil
+    term_width = shutil.get_terminal_size(fallback=(200, 24)).columns
+    out = Console(width=term_width, force_terminal=False)
     for i, record in enumerate(net_result.records):
         if i > 0:
             out.print()  # blank line between members
