@@ -52,7 +52,14 @@ class QueryExecutor:
         # EONID, VLAN, L2, ZONE are extensible attributes, not WAPI fields
         extattr_fields = {"EONID", "VLAN", "L2", "Zone", "Site"}
         has_extattrs = [f for f in (params.return_fields or []) if f in extattr_fields]
-        api_fields = [f for f in params.return_fields if f not in extattr_fields] if params.return_fields else []
+        # member_assignment is a computed display field — WAPI provides member + failover_association
+        pseudo_fields = {"member_assignment"}
+        api_fields = [f for f in params.return_fields if f not in extattr_fields and f not in pseudo_fields] if params.return_fields else []
+        # Inject the underlying WAPI fields needed to compute member_assignment
+        if params.return_fields and any(f in pseudo_fields for f in params.return_fields):
+            for wf in ("member", "failover_association"):
+                if wf not in api_fields:
+                    api_fields.append(wf)
         if has_extattrs and api_fields and "extattrs" not in api_fields:
             api_fields.append("extattrs")
 
