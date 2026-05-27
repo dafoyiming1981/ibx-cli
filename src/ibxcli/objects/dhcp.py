@@ -8,7 +8,7 @@ from ibxcli.objects.base import ObjectHandler
 class NetworkHandler(ObjectHandler):
     obj_type = "network"
     display_name = "IPv4 Networks"
-    default_return_fields = ["network", "members", "VLAN", "L2", "Zone", "Site"]
+    default_return_fields = ["network", "members", "VLAN", "L2", "Zone", "Site", "comment"]
 
     def build_search_filters(self, network=None, network_view=None):
         filters = {}
