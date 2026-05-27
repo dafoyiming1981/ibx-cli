@@ -1258,18 +1258,66 @@ class QueryExecutor:
             return_fields=list(default_fields),
         )
 
+    def _execute_or_queries(
+        self,
+        params: QueryParams,
+        search: dict,
+        or_extattr_keys: list[str],
+        api_fields: list[str],
+    ) -> list[dict]:
+        """Execute multiple queries for OR-style extattr filters and merge results.
+
+        For example, *VLAN=100,200 is split into two separate WAPI queries
+        (VLAN=100 and VLAN=200), then deduplicated by _ref.
+
+        Multiple OR keys produce a Cartesian product:
+        (VLAN=100 OR VLAN=200) AND (Site=BJ1 OR Site=SH1)
+        """
+        from itertools import product
+
+        # Extract OR values per key
+        or_groups: dict[str, list[str]] = {}
+        for key in or_extattr_keys:
+            or_groups[key] = [v.strip() for v in search.pop(key).split(",")]
+
+        # Base filters (non-OR keys) shared by all queries
+        base = dict(search)
+
+        seen_refs: set[str] = set()
+        all_records: list[dict] = []
+
+        # Cartesian product across all OR groups
+        keys = list(or_groups.keys())
+        value_lists = [or_groups[k] for k in keys]
+        for combo in product(*value_lists):
+            query = dict(base)
+            for key, val in zip(keys, combo):
+                query[key] = val
+            batch = self._client.get(
+                obj_type=params.obj_type,
+                search_fields=query,
+                return_fields=api_fields or None,
+            )
+            for rec in batch:
+                ref = rec.get("_ref", "")
+                if ref:
+                    if ref not in seen_refs:
+                        seen_refs.add(ref)
+                        all_records.append(rec)
+                else:
+                    all_records.append(rec)
+
+        return all_records
+
     def execute(self, params: QueryParams) -> QueryResult:
         """Execute the query and apply post-processing."""
         search = dict(params.search_filters)
 
         # Build API return_fields: strip pseudo-fields that require post-processing
-        # EONID, VLAN, L2, ZONE are extensible attributes, not WAPI fields
         extattr_fields = {"EONID", "VLAN", "L2", "Zone", "Site"}
         has_extattrs = [f for f in (params.return_fields or []) if f in extattr_fields]
-        # member_assignment is a computed display field — WAPI provides member + failover_association
         pseudo_fields = {"member_assignment"}
         api_fields = [f for f in params.return_fields if f not in extattr_fields and f not in pseudo_fields] if params.return_fields else []
-        # Inject the underlying WAPI fields needed to compute member_assignment
         if params.return_fields and any(f in pseudo_fields for f in params.return_fields):
             for wf in ("member", "failover_association"):
                 if wf not in api_fields:
@@ -1277,11 +1325,16 @@ class QueryExecutor:
         if has_extattrs and api_fields and "extattrs" not in api_fields:
             api_fields.append("extattrs")
 
-        records = self._client.get(
-            obj_type=params.obj_type,
-            search_fields=search,
-            return_fields=api_fields or None,
-        )
+        # Detect OR-style extattr filters (e.g. *VLAN -> "100,200" means VLAN=100 OR VLAN=200)
+        or_extattr_keys = [k for k, v in search.items() if k.startswith("*") and "," in v]
+        if or_extattr_keys:
+            records = self._execute_or_queries(params, search, or_extattr_keys, api_fields)
+        else:
+            records = self._client.get(
+                obj_type=params.obj_type,
+                search_fields=search,
+                return_fields=api_fields or None,
+            )
 
         # Post-process: extract extensible attributes, remove _ref and extattrs
         for record in records:
