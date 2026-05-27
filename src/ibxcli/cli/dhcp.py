@@ -245,12 +245,86 @@ def ipv4_addresses(ctx, network, status, mac, name, **kwargs):
 @click.pass_context
 def ranges(ctx, network, network_view, vlan, zone, site, **kwargs):
     """List DHCP address ranges."""
-    handler = HANDLERS["range"]
-    filters = handler.build_search_filters(
+    has_extattr = vlan or zone or site
+    if has_extattr:
+        # WAPI doesn't support EA search on range objects directly.
+        # Resolve matching networks by EA, then filter ranges by CIDR.
+        _render_ranges_by_extattrs(ctx, vlan, zone, site, network, network_view, **kwargs)
+    else:
+        handler = HANDLERS["range"]
+        filters = handler.build_search_filters(network=network, network_view=network_view)
+        execute_and_render(ctx, "range", filters, **kwargs)
+
+
+def _render_ranges_by_extattrs(ctx, vlan, zone, site, network, network_view, **kwargs):
+    """Find networks by extattrs, then show ranges for matching networks."""
+    from ibxcli.cli.main import _ensure_client
+    from rich.console import Console
+
+    _ensure_client(ctx)
+
+    net_handler = HANDLERS["network"]
+    net_filters = net_handler.build_search_filters(
         network=network, network_view=network_view,
         vlan=vlan or None, zone=zone or None, site=site or None,
     )
-    execute_and_render(ctx, "range", filters, **kwargs)
+    net_params = ctx.obj["executor"].build_params(
+        obj_type=net_handler.obj_type,
+        search_filters=net_filters,
+        default_fields=net_handler.default_return_fields,
+    )
+    net_params.limit = None  # don't limit networks — need ALL matching CIDRs
+
+    try:
+        net_result = ctx.obj["executor"].execute(net_params)
+    except Exception as e:
+        Console(stderr=True).print(f"[red]Error:[/red] {e}")
+        ctx.exit(1)
+        return
+
+    if not net_result.records:
+        Console(stderr=True).print("[yellow]No networks found.[/yellow]")
+        return
+
+    # Collect matching network CIDRs
+    matching_cidrs = {r.get("network") for r in net_result.records if r.get("network")}
+
+    # Fetch all ranges and filter to matching networks
+    range_handler = HANDLERS["range"]
+    range_filters = range_handler.build_search_filters(network_view=network_view)
+    range_params = ctx.obj["executor"].build_params(
+        obj_type=range_handler.obj_type,
+        search_filters=range_filters,
+        default_fields=range_handler.default_return_fields,
+    )
+    range_params.limit = None
+
+    try:
+        range_result = ctx.obj["executor"].execute(range_params)
+    except Exception as e:
+        Console(stderr=True).print(f"[red]Error fetching ranges:[/red] {e}")
+        ctx.exit(1)
+        return
+
+    # Filter ranges to matching networks
+    filtered = [r for r in range_result.records if r.get("network") in matching_cidrs]
+
+    # Apply user limit/sort to filtered results
+    user_limit = ctx.params.get("limit")
+    sort_by = ctx.params.get("sort")
+    if sort_by:
+        filtered = sorted(filtered, key=lambda r: r.get(sort_by, ""))
+    if user_limit and len(filtered) > user_limit:
+        filtered = filtered[:user_limit]
+
+    if not filtered:
+        Console(stderr=True).print("[yellow]No ranges found for matching networks.[/yellow]")
+        return
+
+    from ibxcli.formatters.base import get_formatter
+    fmt = ctx.params.get("output_format", "table")
+    formatter = get_formatter(fmt)
+    Console().print(formatter.render(filtered, range_handler.default_return_fields), soft_wrap=True)
 
 
 @dhcp.command()
