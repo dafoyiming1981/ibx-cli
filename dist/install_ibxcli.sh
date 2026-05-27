@@ -1276,6 +1276,45 @@ class QueryExecutor:
             else:
                 record["member_assignment"] = "None"
 
+        # For range objects, inherit VLAN/Zone/Site extattrs from parent network
+        if params.obj_type == "range":
+            net_ea_fields = [f for f in extattr_fields if f in ("VLAN", "Zone", "Site")]
+            # Check if any range is missing these fields
+            needs_inheritance = any(
+                not record.get(f) for record in records for f in net_ea_fields
+            )
+            if needs_inheritance and net_ea_fields:
+                # Collect unique network CIDRs from ranges
+                net_cidrs = set()
+                for record in records:
+                    cidr = record.get("network", "")
+                    if cidr:
+                        net_cidrs.add(cidr)
+
+                # Fetch parent networks with extattrs
+                network_extattrs = {}
+                if net_cidrs:
+                    for cidr in net_cidrs:
+                        net_records = self._client.get(
+                            obj_type="network",
+                            search_fields={"network": cidr},
+                            return_fields=["network", "extattrs"],
+                        )
+                        for nr in net_records:
+                            ext = nr.get("extattrs", {})
+                            network_extattrs[cidr] = {
+                                f: ext.get(f, {}).get("value", "")
+                                for f in net_ea_fields
+                            }
+
+                # Inherit missing extattrs from parent network
+                for record in records:
+                    cidr = record.get("network", "")
+                    parent_ea = network_extattrs.get(cidr, {})
+                    for f in net_ea_fields:
+                        if not record.get(f):
+                            record[f] = parent_ea.get(f, "")
+
         # Client-side sorting (avoids WAPI _sort compatibility issues)
         if params.sort_by:
             records = sorted(records, key=lambda r: r.get(params.sort_by, ""))
