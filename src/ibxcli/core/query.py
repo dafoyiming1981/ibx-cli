@@ -116,14 +116,11 @@ class QueryExecutor:
         if or_extattr_keys:
             records = self._execute_or_queries(params, search, or_extattr_keys, api_fields)
         else:
-            import sys
-            print(f"[DEBUG] search_fields: {search}", file=sys.stderr)
             records = self._client.get(
                 obj_type=params.obj_type,
                 search_fields=search,
                 return_fields=api_fields or None,
             )
-            print(f"[DEBUG] records count: {len(records) if records else 0}", file=sys.stderr)
 
         # Post-process: extract extensible attributes, remove _ref and extattrs
         for record in records:
