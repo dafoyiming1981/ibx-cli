@@ -305,7 +305,18 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
             comment = rng.get("comment", "")
             comment_str = f"  [dim]{comment}[/dim]" if comment else ""
 
-            out.print(f"  {connector} [cyan]{start} - {end}[/cyan]  {tag}  → {assignment}{comment_str}")
+            # DDNS info
+            ddns_updates = rng.get("enable_ddns")
+            ddns_domain = rng.get("ddns_domainname", "")
+            ddns_str = ""
+            if ddns_updates is True:
+                ddns_str = f"  DDNS: [green]ON[/green]"
+                if ddns_domain:
+                    ddns_str += f" [dim]({ddns_domain})[/dim]"
+            elif ddns_updates is False:
+                ddns_str = "  DDNS: [dim]OFF[/dim]"
+
+            out.print(f"  {connector} [cyan]{start} - {end}[/cyan]  {tag}  → {assignment}{comment_str}{ddns_str}")
 
 
 @dhcp.command()
@@ -1597,7 +1608,7 @@ class IPv4AddressHandler(ObjectHandler):
 class RangeHandler(ObjectHandler):
     obj_type = "range"
     display_name = "DHCP Ranges"
-    default_return_fields = ["start_addr", "end_addr", "network", "server_association_type", "member_assignment", "comment", "VLAN", "L2", "Zone", "Site"]
+    default_return_fields = ["start_addr", "end_addr", "network", "server_association_type", "member_assignment", "enable_ddns", "ddns_domainname", "VLAN", "Zone", "Site"]
 
     def build_search_filters(self, network=None, network_view=None):
         filters = {}

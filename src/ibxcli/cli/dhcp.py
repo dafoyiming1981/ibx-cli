@@ -122,7 +122,18 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
             comment = rng.get("comment", "")
             comment_str = f"  [dim]{comment}[/dim]" if comment else ""
 
-            out.print(f"  {connector} [cyan]{start} - {end}[/cyan]  {tag}  → {assignment}{comment_str}")
+            # DDNS info
+            ddns_updates = rng.get("enable_ddns")
+            ddns_domain = rng.get("ddns_domainname", "")
+            ddns_str = ""
+            if ddns_updates is True:
+                ddns_str = f"  DDNS: [green]ON[/green]"
+                if ddns_domain:
+                    ddns_str += f" [dim]({ddns_domain})[/dim]"
+            elif ddns_updates is False:
+                ddns_str = "  DDNS: [dim]OFF[/dim]"
+
+            out.print(f"  {connector} [cyan]{start} - {end}[/cyan]  {tag}  → {assignment}{comment_str}{ddns_str}")
 
 
 @dhcp.command()
