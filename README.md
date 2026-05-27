@@ -256,11 +256,18 @@ ibx dhcp ipv6-networks
 
 # 列出网络容器
 ibx dhcp containers
+
+# 列出 DHCP ranges
+ibx dhcp ranges
+
+# 按扩展属性过滤 ranges
+ibx dhcp ranges --vlan 100
+ibx dhcp ranges --vlan 100 --vlan 200 --zone PROD
 ```
 
 #### 支持的 extensible attributes 过滤
 
-`ibx dhcp networks` 和 `ibx dhcp networks --with-ranges` 支持按以下扩展属性过滤：
+`ibx dhcp networks`（含 `--with-ranges`）和 `ibx dhcp ranges` 支持按以下扩展属性过滤：
 
 | 参数 | WAPI Extensible Attribute | 说明 |
 |------|--------------------------|------|
