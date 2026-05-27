@@ -227,6 +227,21 @@ ibx dhcp networks
 # 按 CIDR 过滤
 ibx dhcp networks --network "10.0.0.0/24"
 
+# 按扩展属性 (extensible attributes) 过滤
+ibx dhcp networks --vlan 100
+ibx dhcp networks --vlan 100 --zone PROD --site BJ1
+
+# OR 过滤 — 同时指定多个值，返回匹配任一值的结果
+ibx dhcp networks --vlan 100 --vlan 200
+ibx dhcp networks --site BJ1 --site SH1
+
+# OR 过滤组合 — 多个维度产生笛卡尔积
+ibx dhcp networks --vlan 100 --vlan 200 --site BJ1 --site SH1
+# 等效于: (VLAN=100 OR VLAN=200) AND (Site=BJ1 OR Site=SH1)
+
+# 带 ranges 树形视图
+ibx dhcp networks --vlan 100 --with-ranges
+
 # 列出固定地址 (DHCP reservation)
 ibx dhcp fixed-address --mac "00:11:22:33:44:55"
 
@@ -242,6 +257,22 @@ ibx dhcp ipv6-networks
 # 列出网络容器
 ibx dhcp containers
 ```
+
+#### 支持的 extensible attributes 过滤
+
+`ibx dhcp networks` 和 `ibx dhcp networks --with-ranges` 支持按以下扩展属性过滤：
+
+| 参数 | WAPI Extensible Attribute | 说明 |
+|------|--------------------------|------|
+| `--vlan <值>` | `VLAN` | VLAN ID，支持重复指定多个值 (OR) |
+| `--zone <值>` | `Zone` | 区域名称，支持重复指定多个值 (OR) |
+| `--site <值>` | `Site` | 站点名称，支持重复指定多个值 (OR) |
+
+**过滤逻辑：**
+
+- 同一参数指定多个值 → **OR** 关系（如 `--vlan 100 --vlan 200` 匹配 VLAN=100 或 VLAN=200）
+- 不同参数之间 → **AND** 关系（如 `--vlan 100 --site BJ1` 同时满足两个条件）
+- 底层通过客户端多次查询并去重合并实现
 
 ### 基础设施命令
 
