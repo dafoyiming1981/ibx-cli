@@ -263,7 +263,9 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
             ranges_by_network.setdefault(net_cidr, []).append(r)
 
     # Render
-    out = Console(width=160, force_terminal=False)
+    import shutil
+    term_width = shutil.get_terminal_size(fallback=(200, 24)).columns
+    out = Console(width=term_width, force_terminal=False)
     for i, record in enumerate(net_result.records):
         if i > 0:
             out.print()  # blank line between members
@@ -1473,6 +1475,7 @@ cat > "$SRC_DIR/formatters/table.py" << 'PYEOF'
 from __future__ import annotations
 
 import io
+import shutil
 from rich.console import Console
 from rich.table import Table
 
@@ -1486,9 +1489,10 @@ class TableFormatter(BaseFormatter):
             return ""
 
         cols = fields or list(records[0].keys())
+        term_width = shutil.get_terminal_size(fallback=(200, 24)).columns
         table = Table(show_header=True, header_style="bold cyan")
         for col in cols:
-            table.add_column(col, no_wrap=True, max_width=60)
+            table.add_column(col, no_wrap=True)
 
         for record in records:
             row_data = []
@@ -1500,7 +1504,7 @@ class TableFormatter(BaseFormatter):
             table.add_row(*row_data)
 
         f = io.StringIO()
-        c = Console(file=f, width=160, force_terminal=False)
+        c = Console(file=f, width=term_width, force_terminal=False)
         c.print(table)
         return f.getvalue()
 
