@@ -29,13 +29,9 @@ def networks(ctx, network, network_view, with_ranges, **kwargs):
 
 
 def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
-    """Render networks with their DHCP ranges nested underneath."""
-    from ibxcli.cli.main import _ensure_client, output_options as _output_options
-    from ibxcli.formatters.base import get_formatter
+    """Render networks with their DHCP ranges nested underneath, with failover tree view."""
+    from ibxcli.cli.main import _ensure_client
     from rich.console import Console
-    from rich.table import Table
-    import io
-    import sys
 
     _ensure_client(ctx)
 
@@ -48,9 +44,6 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
         search_filters=filters,
         default_fields=net_handler.default_return_fields,
     )
-    fields_override = ctx.params.get("fields")
-    if fields_override:
-        net_params.return_fields = [f.strip() for f in fields_override.split(",")]
     net_params.limit = ctx.params.get("limit", 100)
     net_params.sort_by = ctx.params.get("sort")
 
@@ -66,7 +59,6 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
 
     # Fetch ranges grouped by network CIDR
     range_filters = range_handler.build_search_filters(network_view=ctx.params.get("network_view"))
-    Console(stderr=True).print(f"[cyan]DEBUG range_filters={range_filters}[/cyan]")
     range_params = ctx.obj["executor"].build_params(
         obj_type=range_handler.obj_type,
         search_filters=range_filters,
@@ -79,13 +71,6 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
         Console(stderr=True).print(f"[red]Error fetching ranges:[/red] {e}")
         sys.exit(1)
 
-    Console(stderr=True).print(f"[cyan]DEBUG range_result count={len(range_result.records)}, fields={range_result.fields}[/cyan]")
-
-    # DEBUG: dump first range to see actual fields
-    if range_result.records:
-        Console(stderr=True).print(f"[cyan]DEBUG range keys: {list(range_result.records[0].keys())}[/cyan]")
-        Console(stderr=True).print(f"[cyan]DEBUG range[0]: {range_result.records[0]}[/cyan]")
-
     # Index ranges by network CIDR
     ranges_by_network = {}
     for r in range_result.records:
@@ -93,51 +78,51 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
         if net_cidr:
             ranges_by_network.setdefault(net_cidr, []).append(r)
 
-    Console(stderr=True).print(f"[cyan]DEBUG ranges_by_network keys: {list(ranges_by_network.keys())}[/cyan]")
-    Console(stderr=True).print(f"[cyan]DEBUG networks: {[r.get('network','') for r in net_result.records]}[/cyan]")
+    # Render: member header + tree ranges
+    out = Console(width=160, force_terminal=False)
+    for i, record in enumerate(net_result.records):
+        if i > 0:
+            out.print()  # blank line between members
 
-    # Render
-    net_fields = net_result.fields
-    table = Table(show_header=True, header_style="bold cyan")
-
-    # All columns are no_wrap for compactness
-    for col in net_fields:
-        table.add_column(col, no_wrap=True, max_width=60)
-
-    for record in net_result.records:
-        # Network row
-        table.add_row(*[str(record.get(c, "")) for c in net_fields])
-
-        # Range rows nested below
         cidr = record.get("network", "")
-        child_ranges = ranges_by_network.get(cidr, [])
-        for i, rng in enumerate(child_ranges):
-            is_last = i == len(child_ranges) - 1
-            prefix = "└─ " if is_last else "├─ "
-            row_vals = []
-            for j, col in enumerate(net_fields):
-                if j == 0:
-                    row_vals.append(prefix + str(rng.get("start_addr", "")))
-                elif col == "members":
-                    # Show Member Assignment: None, member hostname, or failover association
-                    assoc_type = rng.get("server_association_type", "NONE")
-                    if assoc_type == "MEMBER":
-                        member_val = rng.get("member", "")
-                        row_vals.append(member_val if member_val else "None")
-                    elif assoc_type == "FAILOVER":
-                        row_vals.append(str(rng.get("failover_association", "")))
-                    else:
-                        row_vals.append("None")
-                elif col == "comment":
-                    row_vals.append(str(rng.get("comment", "")))
-                else:
-                    row_vals.append("")
-            table.add_row(*row_vals)
+        header = f"[bold]{cidr}[/bold]"
+        if record.get("comment"):
+            header += f"  [dim]{record['comment']}[/dim]"
+        out.print(header)
 
-    out = io.StringIO()
-    c = Console(file=out, width=160, force_terminal=False)
-    c.print(table)
-    Console().print(out.getvalue(), soft_wrap=True)
+        child_ranges = ranges_by_network.get(cidr, [])
+        if not child_ranges:
+            out.print("  [dim]└── No DHCP ranges configured[/dim]")
+            continue
+
+        for idx, rng in enumerate(child_ranges):
+            is_last = idx == len(child_ranges) - 1
+            connector = "└─" if is_last else "├─"
+
+            start = rng.get("start_addr", "")
+            end = rng.get("end_addr", "")
+            assoc_type = rng.get("server_association_type", "NONE")
+
+            # Build assignment description with color coding
+            if assoc_type == "MEMBER":
+                member_val = rng.get("member", "")
+                assignment = f"[green]{member_val}[/green]" if member_val else "[dim]None[/dim]"
+                tag = "[dim]MEMBER[/dim]"
+            elif assoc_type == "FAILOVER":
+                fo_name = rng.get("failover_association", "")
+                assignment = f"[yellow]{fo_name}[/yellow]" if fo_name else "[dim]None[/dim]"
+                tag = "[bold yellow]FAILOVER[/bold yellow]"
+            elif assoc_type == "MS_SERVER":
+                assignment = "[cyan]MS DHCP[/cyan]"
+                tag = "[dim]MS_SERVER[/dim]"
+            else:
+                assignment = "[dim]None[/dim]"
+                tag = "[dim]NONE[/dim]"
+
+            comment = rng.get("comment", "")
+            comment_str = f"  [dim]{comment}[/dim]" if comment else ""
+
+            out.print(f"  {connector} [cyan]{start} - {end}[/cyan]  {tag}  → {assignment}{comment_str}")
 
 
 @dhcp.command()
@@ -179,24 +164,10 @@ def fixed_addresses(ctx, ipv4addr, mac, network_view, **kwargs):
 
 @dhcp.command()
 @output_options
-@click.option("--address", help="Leased IP address filter")
-@click.option("--mac", help="Client MAC address filter")
-@click.option("--network", help="Network filter")
-@click.option("--state", type=click.Choice(["active", "expired"]), help="Lease state filter")
-@click.pass_context
-def leases(ctx, address, mac, network, state, **kwargs):
-    """List DHCP leases."""
-    handler = HANDLERS["lease"]
-    filters = handler.build_search_filters(address=address, mac=mac, network=network, state=state)
-    execute_and_render(ctx, "lease", filters, **kwargs)
-
-
-@dhcp.command()
-@output_options
-@click.option("--network", help="Network filter")
-@click.option("--status", type=click.Choice(["used", "free"]), help="Address status filter")
+@click.option("--network", help="CIDR network filter (e.g., 10.0.0.0/24)")
+@click.option("--status", help="Lease status filter")
 @click.option("--mac", help="MAC address filter")
-@click.option("--name", help="Associated name filter")
+@click.option("--name", help="Client name filter")
 @click.pass_context
 def ipv4_addresses(ctx, network, status, mac, name, **kwargs):
     """List IPv4 address usage status."""
@@ -215,3 +186,15 @@ def ranges(ctx, network, network_view, **kwargs):
     handler = HANDLERS["range"]
     filters = handler.build_search_filters(network=network, network_view=network_view)
     execute_and_render(ctx, "range", filters, **kwargs)
+
+
+@dhcp.command()
+@output_options
+@click.option("--network", help="CIDR network filter (e.g., 10.0.0.0/24)")
+@click.option("--network-view", help="Network view filter")
+@click.pass_context
+def leases(ctx, network, network_view, **kwargs):
+    """List DHCP leases."""
+    handler = HANDLERS["lease"]
+    filters = handler.build_search_filters(network=network, network_view=network_view)
+    execute_and_render(ctx, "lease", filters, **kwargs)

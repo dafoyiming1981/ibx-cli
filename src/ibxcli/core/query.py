@@ -62,16 +62,6 @@ class QueryExecutor:
             return_fields=api_fields or None,
         )
 
-        # DEBUG: unconditional dump for range objects
-        if params.obj_type == "range":
-            import sys
-            print(f"DEBUG range query: obj_type=range, filters={search}, records_count={len(records)}", file=sys.stderr)
-            if records:
-                print(f"DEBUG WAPI range record keys: {list(records[0].keys())}", file=sys.stderr)
-                print(f"DEBUG WAPI range[0] server_association_type={records[0].get('server_association_type')!r}", file=sys.stderr)
-                print(f"DEBUG WAPI range[0] member={records[0].get('member')!r}", file=sys.stderr)
-                print(f"DEBUG WAPI range[0] failover_association={records[0].get('failover_association')!r}", file=sys.stderr)
-
         # Post-process: extract extensible attributes, remove _ref and extattrs
         for record in records:
             if has_extattrs:
