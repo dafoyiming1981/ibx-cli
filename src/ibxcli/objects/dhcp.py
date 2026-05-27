@@ -10,12 +10,18 @@ class NetworkHandler(ObjectHandler):
     display_name = "IPv4 Networks"
     default_return_fields = ["network", "members", "VLAN", "L2", "Zone", "Site", "comment"]
 
-    def build_search_filters(self, network=None, network_view=None):
+    def build_search_filters(self, network=None, network_view=None, vlan=None, zone=None, site=None):
         filters = {}
         if network:
             filters["network"] = network
         if network_view:
             filters["network_view"] = network_view
+        if vlan:
+            filters["*VLAN"] = ",".join(vlan) if isinstance(vlan, (list, tuple)) else str(vlan)
+        if zone:
+            filters["*Zone"] = ",".join(zone) if isinstance(zone, (list, tuple)) else str(zone)
+        if site:
+            filters["*Site"] = ",".join(site) if isinstance(site, (list, tuple)) else str(site)
         return filters
 
 
@@ -104,10 +110,16 @@ class RangeHandler(ObjectHandler):
     display_name = "DHCP Ranges"
     default_return_fields = ["start_addr", "end_addr", "network", "server_association_type", "member_assignment", "enable_ddns", "ddns_domainname", "VLAN", "Zone", "Site"]
 
-    def build_search_filters(self, network=None, network_view=None):
+    def build_search_filters(self, network=None, network_view=None, vlan=None, zone=None, site=None):
         filters = {}
         if network:
             filters["network"] = network
         if network_view:
             filters["network_view"] = network_view
+        if vlan:
+            filters["*VLAN"] = ",".join(vlan) if isinstance(vlan, (list, tuple)) else str(vlan)
+        if zone:
+            filters["*Zone"] = ",".join(zone) if isinstance(zone, (list, tuple)) else str(zone)
+        if site:
+            filters["*Site"] = ",".join(site) if isinstance(site, (list, tuple)) else str(site)
         return filters

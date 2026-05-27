@@ -17,11 +17,17 @@ def dhcp():
 @click.option("--network", help="CIDR network filter (e.g., 10.0.0.0/24)")
 @click.option("--network-view", help="Network view filter")
 @click.option("--with-ranges", is_flag=True, help="Show DHCP ranges under each network")
+@click.option("--vlan", multiple=True, help="VLAN filter (repeatable, e.g. --vlan 100 --vlan 200)")
+@click.option("--zone", multiple=True, help="Zone filter (repeatable)")
+@click.option("--site", multiple=True, help="Site filter (repeatable)")
 @click.pass_context
-def networks(ctx, network, network_view, with_ranges, **kwargs):
+def networks(ctx, network, network_view, with_ranges, vlan, zone, site, **kwargs):
     """List IPv4 networks."""
     handler = HANDLERS["network"]
-    filters = handler.build_search_filters(network=network, network_view=network_view)
+    filters = handler.build_search_filters(
+        network=network, network_view=network_view,
+        vlan=vlan or None, zone=zone or None, site=site or None,
+    )
     if with_ranges:
         _render_networks_with_ranges(ctx, handler, filters, **kwargs)
     else:
@@ -58,8 +64,13 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
         Console(stderr=True).print("[yellow]No networks found.[/yellow]")
         return
 
-    # Fetch ranges grouped by network CIDR
-    range_filters = range_handler.build_search_filters(network_view=ctx.params.get("network_view"))
+    # Fetch ranges grouped by network CIDR — inherit extattrs filters from parent
+    range_filters = range_handler.build_search_filters(
+        network_view=ctx.params.get("network_view"),
+        vlan=filters.get("*VLAN"),
+        zone=filters.get("*Zone"),
+        site=filters.get("*Site"),
+    )
     range_params = ctx.obj["executor"].build_params(
         obj_type=range_handler.obj_type,
         search_filters=range_filters,

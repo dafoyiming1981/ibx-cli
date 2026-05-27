@@ -43,7 +43,7 @@ mkdir -p "$BIN_DIR"
 
 # ===== ibxcli/__init__.py =====
 cat > "$SRC_DIR/__init__.py" << 'PYEOF'
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 import warnings
 from urllib3.exceptions import InsecureRequestWarning
@@ -200,11 +200,17 @@ def dhcp():
 @click.option("--network", help="CIDR network filter (e.g., 10.0.0.0/24)")
 @click.option("--network-view", help="Network view filter")
 @click.option("--with-ranges", is_flag=True, help="Show DHCP ranges under each network")
+@click.option("--vlan", multiple=True, help="VLAN filter (repeatable, e.g. --vlan 100 --vlan 200)")
+@click.option("--zone", multiple=True, help="Zone filter (repeatable)")
+@click.option("--site", multiple=True, help="Site filter (repeatable)")
 @click.pass_context
-def networks(ctx, network, network_view, with_ranges, **kwargs):
+def networks(ctx, network, network_view, with_ranges, vlan, zone, site, **kwargs):
     """List IPv4 networks."""
     handler = HANDLERS["network"]
-    filters = handler.build_search_filters(network=network, network_view=network_view)
+    filters = handler.build_search_filters(
+        network=network, network_view=network_view,
+        vlan=vlan or None, zone=zone or None, site=site or None,
+    )
     if with_ranges:
         _render_networks_with_ranges(ctx, handler, filters, **kwargs)
     else:
@@ -241,8 +247,13 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
         Console(stderr=True).print("[yellow]No networks found.[/yellow]")
         return
 
-    # Fetch ranges grouped by network CIDR
-    range_filters = range_handler.build_search_filters(network_view=ctx.params.get("network_view"))
+    # Fetch ranges grouped by network CIDR — inherit extattrs filters from parent
+    range_filters = range_handler.build_search_filters(
+        network_view=ctx.params.get("network_view"),
+        vlan=filters.get("*VLAN"),
+        zone=filters.get("*Zone"),
+        site=filters.get("*Site"),
+    )
     range_params = ctx.obj["executor"].build_params(
         obj_type=range_handler.obj_type,
         search_filters=range_filters,
@@ -1594,12 +1605,18 @@ class NetworkHandler(ObjectHandler):
     display_name = "IPv4 Networks"
     default_return_fields = ["network", "members", "VLAN", "L2", "Zone", "Site", "comment"]
 
-    def build_search_filters(self, network=None, network_view=None):
+    def build_search_filters(self, network=None, network_view=None, vlan=None, zone=None, site=None):
         filters = {}
         if network:
             filters["network"] = network
         if network_view:
             filters["network_view"] = network_view
+        if vlan:
+            filters["*VLAN"] = ",".join(vlan) if isinstance(vlan, (list, tuple)) else str(vlan)
+        if zone:
+            filters["*Zone"] = ",".join(zone) if isinstance(zone, (list, tuple)) else str(zone)
+        if site:
+            filters["*Site"] = ",".join(site) if isinstance(site, (list, tuple)) else str(site)
         return filters
 
 
@@ -1688,12 +1705,18 @@ class RangeHandler(ObjectHandler):
     display_name = "DHCP Ranges"
     default_return_fields = ["start_addr", "end_addr", "network", "server_association_type", "member_assignment", "enable_ddns", "ddns_domainname", "VLAN", "Zone", "Site"]
 
-    def build_search_filters(self, network=None, network_view=None):
+    def build_search_filters(self, network=None, network_view=None, vlan=None, zone=None, site=None):
         filters = {}
         if network:
             filters["network"] = network
         if network_view:
             filters["network_view"] = network_view
+        if vlan:
+            filters["*VLAN"] = ",".join(vlan) if isinstance(vlan, (list, tuple)) else str(vlan)
+        if zone:
+            filters["*Zone"] = ",".join(zone) if isinstance(zone, (list, tuple)) else str(zone)
+        if site:
+            filters["*Site"] = ",".join(site) if isinstance(site, (list, tuple)) else str(site)
         return filters
 
 PYEOF
