@@ -78,6 +78,13 @@ class IbxClient:
         except connector.InfobloxException as e:
             raise IbxWapiError(code=400, wapi_text=str(e)) from e
 
+    def call_func(self, func_name: str, ref: str, **kwargs: Any) -> Any:
+        """Call a WAPI function on an object reference."""
+        try:
+            return self._connector.call_func(func_name, ref, **kwargs)
+        except connector.InfobloxException as e:
+            raise IbxWapiError(code=400, wapi_text=str(e)) from e
+
     @property
     def connector(self):
         """Expose the underlying connector for advanced operations."""

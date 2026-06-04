@@ -122,6 +122,11 @@ class QueryExecutor:
                 return_fields=api_fields or None,
             )
 
+        # Preserve _ref for network objects before stripping (needed for nextavailableip)
+        net_refs = []
+        if params.obj_type in ("network", "ipv6network"):
+            net_refs = [r.get("_ref", "") for r in records]
+
         # Post-process: extract extensible attributes, remove _ref and extattrs
         for record in records:
             if has_extattrs:
@@ -208,6 +213,22 @@ class QueryExecutor:
 
         if params.limit and len(records) > params.limit:
             records = records[:params.limit]
+
+        # Resolve next available IP for network objects
+        if params.obj_type in ("network", "ipv6network"):
+            ip_field = "next_available_ipv4address" if params.obj_type == "network" else "next_available_ipv6address"
+            for idx, ref in enumerate(net_refs):
+                if ref:
+                    try:
+                        result = self._client.call_func(
+                            "nextavailableip", ref, num=1
+                        )
+                        if result and "ips" in result and result["ips"]:
+                            records[idx][ip_field] = result["ips"][0].get("ip", "")
+                        else:
+                            records[idx][ip_field] = "No available IP"
+                    except Exception:
+                        records[idx][ip_field] = "No available IP"
 
         # Build display fields from handler defaults, removing _ref
         if params.return_fields:

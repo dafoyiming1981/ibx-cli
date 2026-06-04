@@ -281,6 +281,15 @@ ibx dhcp ranges --vlan 100 --vlan 200 --zone PROD
 - 不同参数之间 → **AND** 关系（如 `--vlan 100 --site BJ1` 同时满足两个条件）
 - 底层通过客户端多次查询并去重合并实现
 
+#### 下一可用 IP
+
+`ibx dhcp networks` 和 `ibx dhcp ipv6-networks` 默认返回每条网络的下一可用地址，通过 WAPI `nextavailableip` 接口获取：
+
+| 命令 | 返回字段 | 说明 |
+|------|----------|------|
+| `ibx dhcp networks` | `next_available_ipv4address` | IPv4 网络下一可用地址，无可用 IP 时显示 `No available IP` |
+| `ibx dhcp ipv6-networks` | `next_available_ipv6address` | IPv6 网络下一可用地址，无可用 IP 时显示 `No available IP` |
+
 ### 基础设施命令
 
 ```bash

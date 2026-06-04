@@ -43,7 +43,7 @@ mkdir -p "$BIN_DIR"
 
 # ===== ibxcli/__init__.py =====
 cat > "$SRC_DIR/__init__.py" << 'PYEOF'
-__version__ = "0.2.0"
+__version__ = "0.1.0"
 
 import warnings
 from urllib3.exceptions import InsecureRequestWarning
@@ -430,6 +430,8 @@ def ranges(ctx, network, network_view, vlan, zone, site, **kwargs):
     """List DHCP address ranges."""
     has_extattr = vlan or zone or site
     if has_extattr:
+        # WAPI doesn't support EA search on range objects directly.
+        # Resolve matching networks by EA, then filter ranges by CIDR.
         _render_ranges_by_extattrs(ctx, vlan, zone, site, network, network_view, **kwargs)
     else:
         handler = HANDLERS["range"]
@@ -454,20 +456,23 @@ def _render_ranges_by_extattrs(ctx, vlan, zone, site, network, network_view, **k
         search_filters=net_filters,
         default_fields=net_handler.default_return_fields,
     )
-    net_params.limit = None
+    net_params.limit = None  # don't limit networks — need ALL matching CIDRs
 
     try:
         net_result = ctx.obj["executor"].execute(net_params)
     except Exception as e:
         Console(stderr=True).print(f"[red]Error:[/red] {e}")
-        sys.exit(1)
+        ctx.exit(1)
+        return
 
     if not net_result.records:
         Console(stderr=True).print("[yellow]No networks found.[/yellow]")
         return
 
+    # Collect matching network CIDRs
     matching_cidrs = {r.get("network") for r in net_result.records if r.get("network")}
 
+    # Fetch all ranges and filter to matching networks
     range_handler = HANDLERS["range"]
     range_filters = range_handler.build_search_filters(network_view=network_view)
     range_params = ctx.obj["executor"].build_params(
@@ -481,10 +486,13 @@ def _render_ranges_by_extattrs(ctx, vlan, zone, site, network, network_view, **k
         range_result = ctx.obj["executor"].execute(range_params)
     except Exception as e:
         Console(stderr=True).print(f"[red]Error fetching ranges:[/red] {e}")
-        sys.exit(1)
+        ctx.exit(1)
+        return
 
+    # Filter ranges to matching networks
     filtered = [r for r in range_result.records if r.get("network") in matching_cidrs]
 
+    # Apply user limit/sort to filtered results
     user_limit = ctx.params.get("limit")
     sort_by = ctx.params.get("sort")
     if sort_by:
@@ -1094,6 +1102,13 @@ class IbxClient:
         except connector.InfobloxException as e:
             raise IbxWapiError(code=400, wapi_text=str(e)) from e
 
+    def call_func(self, func_name: str, ref: str, **kwargs: Any) -> Any:
+        """Call a WAPI function on an object reference."""
+        try:
+            return self._connector.call_func(func_name, ref, **kwargs)
+        except connector.InfobloxException as e:
+            raise IbxWapiError(code=400, wapi_text=str(e)) from e
+
     @property
     def connector(self):
         """Expose the underlying connector for advanced operations."""
@@ -1408,6 +1423,11 @@ class QueryExecutor:
                 return_fields=api_fields or None,
             )
 
+        # Preserve _ref for network objects before stripping (needed for nextavailableip)
+        net_refs = []
+        if params.obj_type in ("network", "ipv6network"):
+            net_refs = [r.get("_ref", "") for r in records]
+
         # Post-process: extract extensible attributes, remove _ref and extattrs
         for record in records:
             if has_extattrs:
@@ -1494,6 +1514,22 @@ class QueryExecutor:
 
         if params.limit and len(records) > params.limit:
             records = records[:params.limit]
+
+        # Resolve next available IP for network objects
+        if params.obj_type in ("network", "ipv6network"):
+            ip_field = "next_available_ipv4address" if params.obj_type == "network" else "next_available_ipv6address"
+            for idx, ref in enumerate(net_refs):
+                if ref:
+                    try:
+                        result = self._client.call_func(
+                            "nextavailableip", ref, num=1
+                        )
+                        if result and "ips" in result and result["ips"]:
+                            records[idx][ip_field] = result["ips"][0].get("ip", "")
+                        else:
+                            records[idx][ip_field] = "No available IP"
+                    except Exception:
+                        records[idx][ip_field] = "No available IP"
 
         # Build display fields from handler defaults, removing _ref
         if params.return_fields:
@@ -1728,7 +1764,7 @@ from ibxcli.objects.base import ObjectHandler
 class NetworkHandler(ObjectHandler):
     obj_type = "network"
     display_name = "IPv4 Networks"
-    default_return_fields = ["network", "members", "VLAN", "L2", "Zone", "Site", "comment"]
+    default_return_fields = ["network", "next_available_ipv4address", "members", "VLAN", "L2", "Zone", "Site", "comment"]
 
     def build_search_filters(self, network=None, network_view=None, vlan=None, zone=None, site=None):
         filters = {}
@@ -1748,7 +1784,7 @@ class NetworkHandler(ObjectHandler):
 class IPv6NetworkHandler(ObjectHandler):
     obj_type = "ipv6network"
     display_name = "IPv6 Networks"
-    default_return_fields = ["ipv6net", "network_view", "comment"]
+    default_return_fields = ["ipv6net", "next_available_ipv6address", "network_view", "comment"]
 
     def build_search_filters(self, network=None, network_view=None):
         filters = {}
