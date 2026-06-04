@@ -1,0 +1,436 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Reference &mdash; ibx-cli 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Search Command" href="commands/search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            ibx-cli
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Commands</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="commands/config.html">Config Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commands/dns.html">DNS Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commands/dhcp.html">DHCP Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commands/infra.html">Infrastructure Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commands/search.html">Search Command</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#core-modules">Core Modules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#module-ibxcli.core.client"><code class="docutils literal notranslate"><span class="pre">ibxcli.core.client</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#ibxcli.core.client.IbxClient"><code class="docutils literal notranslate"><span class="pre">IbxClient</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-ibxcli.core.config"><code class="docutils literal notranslate"><span class="pre">ibxcli.core.config</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#ibxcli.core.config.ConnectionConfig"><code class="docutils literal notranslate"><span class="pre">ConnectionConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#ibxcli.core.config.load_config"><code class="docutils literal notranslate"><span class="pre">load_config()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-ibxcli.core.exceptions"><code class="docutils literal notranslate"><span class="pre">ibxcli.core.exceptions</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#ibxcli.core.exceptions.IbxAuthError"><code class="docutils literal notranslate"><span class="pre">IbxAuthError</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#ibxcli.core.exceptions.IbxConfigError"><code class="docutils literal notranslate"><span class="pre">IbxConfigError</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#ibxcli.core.exceptions.IbxConnectionError"><code class="docutils literal notranslate"><span class="pre">IbxConnectionError</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#ibxcli.core.exceptions.IbxError"><code class="docutils literal notranslate"><span class="pre">IbxError</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#ibxcli.core.exceptions.IbxFormatError"><code class="docutils literal notranslate"><span class="pre">IbxFormatError</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#ibxcli.core.exceptions.IbxWapiError"><code class="docutils literal notranslate"><span class="pre">IbxWapiError</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-ibxcli.core.query"><code class="docutils literal notranslate"><span class="pre">ibxcli.core.query</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#ibxcli.core.query.QueryExecutor"><code class="docutils literal notranslate"><span class="pre">QueryExecutor</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#ibxcli.core.query.QueryParams"><code class="docutils literal notranslate"><span class="pre">QueryParams</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#ibxcli.core.query.QueryResult"><code class="docutils literal notranslate"><span class="pre">QueryResult</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-ibxcli.objects.base"><code class="docutils literal notranslate"><span class="pre">ibxcli.objects.base</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#ibxcli.objects.base.ObjectHandler"><code class="docutils literal notranslate"><span class="pre">ObjectHandler</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-ibxcli.formatters.base"><code class="docutils literal notranslate"><span class="pre">ibxcli.formatters.base</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#ibxcli.formatters.base.BaseFormatter"><code class="docutils literal notranslate"><span class="pre">BaseFormatter</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#ibxcli.formatters.base.get_formatter"><code class="docutils literal notranslate"><span class="pre">get_formatter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#ibxcli.formatters.base.register_formatter"><code class="docutils literal notranslate"><span class="pre">register_formatter()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">ibx-cli</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">API Reference</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/api.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="api-reference">
+<h1>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading"></a></h1>
+<p>Auto-generated API documentation from Python docstrings.</p>
+<section id="core-modules">
+<h2>Core Modules<a class="headerlink" href="#core-modules" title="Link to this heading"></a></h2>
+<section id="module-ibxcli.core.client">
+<span id="ibxcli-core-client"></span><h3><code class="docutils literal notranslate"><span class="pre">ibxcli.core.client</span></code><a class="headerlink" href="#module-ibxcli.core.client" title="Link to this heading"></a></h3>
+<p>WAPI client wrapper around infoblox_client.connector.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="ibxcli.core.client.IbxClient">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ibxcli.core.client.</span></span><span class="sig-name descname"><span class="pre">IbxClient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#ibxcli.core.config.ConnectionConfig" title="ibxcli.core.config.ConnectionConfig"><span class="pre">ConnectionConfig</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ibxcli/core/client.html#IbxClient"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ibxcli.core.client.IbxClient" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Thin wrapper around infoblox_client.connector.Connector.</p>
+<p>Provides automatic pagination, return field control, and error translation.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="ibxcli.core.client.IbxClient.call_func">
+<span class="sig-name descname"><span class="pre">call_func</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Any</span></span></span><a class="reference internal" href="_modules/ibxcli/core/client.html#IbxClient.call_func"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ibxcli.core.client.IbxClient.call_func" title="Link to this definition"></a></dt>
+<dd><p>Call a WAPI function on an object reference.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ibxcli.core.client.IbxClient.connector">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">connector</span></span><a class="headerlink" href="#ibxcli.core.client.IbxClient.connector" title="Link to this definition"></a></dt>
+<dd><p>Expose the underlying connector for advanced operations.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ibxcli.core.client.IbxClient.get">
+<span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">search_fields</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_fields</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_results</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/ibxcli/core/client.html#IbxClient.get"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ibxcli.core.client.IbxClient.get" title="Link to this definition"></a></dt>
+<dd><p>Fetch objects from WAPI with automatic pagination.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ibxcli.core.client.IbxClient.raw_get">
+<span class="sig-name descname"><span class="pre">raw_get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/ibxcli/core/client.html#IbxClient.raw_get"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ibxcli.core.client.IbxClient.raw_get" title="Link to this definition"></a></dt>
+<dd><p>Direct pass-through to connector.get_object for edge cases.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-ibxcli.core.config">
+<span id="ibxcli-core-config"></span><h3><code class="docutils literal notranslate"><span class="pre">ibxcli.core.config</span></code><a class="headerlink" href="#module-ibxcli.core.config" title="Link to this heading"></a></h3>
+<p>Configuration loading and merging for ibx-cli.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="ibxcli.core.config.ConnectionConfig">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ibxcli.core.config.</span></span><span class="sig-name descname"><span class="pre">ConnectionConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">host</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">username</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">password</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wapi_version</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'2.13'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ssl_verify</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">30</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_results</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1000</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ibxcli/core/config.html#ConnectionConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ibxcli.core.config.ConnectionConfig" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Resolved connection configuration.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ibxcli.core.config.ConnectionConfig.host">
+<span class="sig-name descname"><span class="pre">host</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#ibxcli.core.config.ConnectionConfig.host" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ibxcli.core.config.ConnectionConfig.max_results">
+<span class="sig-name descname"><span class="pre">max_results</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1000</span></em><a class="headerlink" href="#ibxcli.core.config.ConnectionConfig.max_results" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ibxcli.core.config.ConnectionConfig.password">
+<span class="sig-name descname"><span class="pre">password</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#ibxcli.core.config.ConnectionConfig.password" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ibxcli.core.config.ConnectionConfig.ssl_verify">
+<span class="sig-name descname"><span class="pre">ssl_verify</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></em><a class="headerlink" href="#ibxcli.core.config.ConnectionConfig.ssl_verify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ibxcli.core.config.ConnectionConfig.timeout">
+<span class="sig-name descname"><span class="pre">timeout</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">30</span></em><a class="headerlink" href="#ibxcli.core.config.ConnectionConfig.timeout" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ibxcli.core.config.ConnectionConfig.username">
+<span class="sig-name descname"><span class="pre">username</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#ibxcli.core.config.ConnectionConfig.username" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ibxcli.core.config.ConnectionConfig.wapi_version">
+<span class="sig-name descname"><span class="pre">wapi_version</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'2.13'</span></em><a class="headerlink" href="#ibxcli.core.config.ConnectionConfig.wapi_version" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ibxcli.core.config.load_config">
+<span class="sig-prename descclassname"><span class="pre">ibxcli.core.config.</span></span><span class="sig-name descname"><span class="pre">load_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profile</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cli_overrides</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#ibxcli.core.config.ConnectionConfig" title="ibxcli.core.config.ConnectionConfig"><span class="pre">ConnectionConfig</span></a></span></span><a class="reference internal" href="_modules/ibxcli/core/config.html#load_config"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ibxcli.core.config.load_config" title="Link to this definition"></a></dt>
+<dd><p>Load and merge config from file, env, and CLI flags.</p>
+<p>Resolution order (later overrides earlier):
+1. Hardcoded defaults
+2. Config file defaults
+3. Config file profile (if specified)
+4. Environment variables
+5. CLI overrides</p>
+</dd></dl>
+
+</section>
+<section id="module-ibxcli.core.exceptions">
+<span id="ibxcli-core-exceptions"></span><h3><code class="docutils literal notranslate"><span class="pre">ibxcli.core.exceptions</span></code><a class="headerlink" href="#module-ibxcli.core.exceptions" title="Link to this heading"></a></h3>
+<p>Custom exception hierarchy for ibx-cli.</p>
+<dl class="py exception">
+<dt class="sig sig-object py" id="ibxcli.core.exceptions.IbxAuthError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ibxcli.core.exceptions.</span></span><span class="sig-name descname"><span class="pre">IbxAuthError</span></span><a class="reference internal" href="_modules/ibxcli/core/exceptions.html#IbxAuthError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ibxcli.core.exceptions.IbxAuthError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#ibxcli.core.exceptions.IbxError" title="ibxcli.core.exceptions.IbxError"><code class="xref py py-class docutils literal notranslate"><span class="pre">IbxError</span></code></a></p>
+<p>Authentication failure (401/403).</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="ibxcli.core.exceptions.IbxConfigError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ibxcli.core.exceptions.</span></span><span class="sig-name descname"><span class="pre">IbxConfigError</span></span><a class="reference internal" href="_modules/ibxcli/core/exceptions.html#IbxConfigError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ibxcli.core.exceptions.IbxConfigError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#ibxcli.core.exceptions.IbxError" title="ibxcli.core.exceptions.IbxError"><code class="xref py py-class docutils literal notranslate"><span class="pre">IbxError</span></code></a></p>
+<p>Configuration file or value error.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="ibxcli.core.exceptions.IbxConnectionError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ibxcli.core.exceptions.</span></span><span class="sig-name descname"><span class="pre">IbxConnectionError</span></span><a class="reference internal" href="_modules/ibxcli/core/exceptions.html#IbxConnectionError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ibxcli.core.exceptions.IbxConnectionError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#ibxcli.core.exceptions.IbxError" title="ibxcli.core.exceptions.IbxError"><code class="xref py py-class docutils literal notranslate"><span class="pre">IbxError</span></code></a></p>
+<p>Network or connection failure.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="ibxcli.core.exceptions.IbxError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ibxcli.core.exceptions.</span></span><span class="sig-name descname"><span class="pre">IbxError</span></span><a class="reference internal" href="_modules/ibxcli/core/exceptions.html#IbxError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ibxcli.core.exceptions.IbxError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>Base exception for all ibx-cli errors.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="ibxcli.core.exceptions.IbxFormatError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ibxcli.core.exceptions.</span></span><span class="sig-name descname"><span class="pre">IbxFormatError</span></span><a class="reference internal" href="_modules/ibxcli/core/exceptions.html#IbxFormatError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ibxcli.core.exceptions.IbxFormatError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#ibxcli.core.exceptions.IbxError" title="ibxcli.core.exceptions.IbxError"><code class="xref py py-class docutils literal notranslate"><span class="pre">IbxError</span></code></a></p>
+<p>Output formatting error.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="ibxcli.core.exceptions.IbxWapiError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ibxcli.core.exceptions.</span></span><span class="sig-name descname"><span class="pre">IbxWapiError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">code</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wapi_code</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wapi_text</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ibxcli/core/exceptions.html#IbxWapiError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ibxcli.core.exceptions.IbxWapiError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#ibxcli.core.exceptions.IbxError" title="ibxcli.core.exceptions.IbxError"><code class="xref py py-class docutils literal notranslate"><span class="pre">IbxError</span></code></a></p>
+<p>WAPI returned an error response.</p>
+</dd></dl>
+
+</section>
+<section id="module-ibxcli.core.query">
+<span id="ibxcli-core-query"></span><h3><code class="docutils literal notranslate"><span class="pre">ibxcli.core.query</span></code><a class="headerlink" href="#module-ibxcli.core.query" title="Link to this heading"></a></h3>
+<p>Query execution engine for ibx-cli.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="ibxcli.core.query.QueryExecutor">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ibxcli.core.query.</span></span><span class="sig-name descname"><span class="pre">QueryExecutor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">client</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ibxcli/core/query.html#QueryExecutor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ibxcli.core.query.QueryExecutor" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Executes queries against the WAPI and post-processes results.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="ibxcli.core.query.QueryExecutor.build_params">
+<span class="sig-name descname"><span class="pre">build_params</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">search_filters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_fields</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#ibxcli.core.query.QueryParams" title="ibxcli.core.query.QueryParams"><span class="pre">QueryParams</span></a></span></span><a class="reference internal" href="_modules/ibxcli/core/query.html#QueryExecutor.build_params"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ibxcli.core.query.QueryExecutor.build_params" title="Link to this definition"></a></dt>
+<dd><p>Build QueryParams from inputs.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ibxcli.core.query.QueryExecutor.execute">
+<span class="sig-name descname"><span class="pre">execute</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#ibxcli.core.query.QueryParams" title="ibxcli.core.query.QueryParams"><span class="pre">QueryParams</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#ibxcli.core.query.QueryResult" title="ibxcli.core.query.QueryResult"><span class="pre">QueryResult</span></a></span></span><a class="reference internal" href="_modules/ibxcli/core/query.html#QueryExecutor.execute"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ibxcli.core.query.QueryExecutor.execute" title="Link to this definition"></a></dt>
+<dd><p>Execute the query and apply post-processing.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ibxcli.core.query.QueryParams">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ibxcli.core.query.</span></span><span class="sig-name descname"><span class="pre">QueryParams</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj_type:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">search_filters:</span> <span class="pre">dict</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_fields:</span> <span class="pre">list[str]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit:</span> <span class="pre">int</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sort_by:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ibxcli/core/query.html#QueryParams"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ibxcli.core.query.QueryParams" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Parameters for a single WAPI query.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ibxcli.core.query.QueryParams.limit">
+<span class="sig-name descname"><span class="pre">limit</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#ibxcli.core.query.QueryParams.limit" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ibxcli.core.query.QueryParams.obj_type">
+<span class="sig-name descname"><span class="pre">obj_type</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#ibxcli.core.query.QueryParams.obj_type" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ibxcli.core.query.QueryParams.return_fields">
+<span class="sig-name descname"><span class="pre">return_fields</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ibxcli.core.query.QueryParams.return_fields" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ibxcli.core.query.QueryParams.search_filters">
+<span class="sig-name descname"><span class="pre">search_filters</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span></em><a class="headerlink" href="#ibxcli.core.query.QueryParams.search_filters" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ibxcli.core.query.QueryParams.sort_by">
+<span class="sig-name descname"><span class="pre">sort_by</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#ibxcli.core.query.QueryParams.sort_by" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ibxcli.core.query.QueryResult">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ibxcli.core.query.</span></span><span class="sig-name descname"><span class="pre">QueryResult</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">records</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fields</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">total_count</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ibxcli/core/query.html#QueryResult"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ibxcli.core.query.QueryResult" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Result of a WAPI query.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ibxcli.core.query.QueryResult.fields">
+<span class="sig-name descname"><span class="pre">fields</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ibxcli.core.query.QueryResult.fields" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ibxcli.core.query.QueryResult.records">
+<span class="sig-name descname"><span class="pre">records</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ibxcli.core.query.QueryResult.records" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ibxcli.core.query.QueryResult.total_count">
+<span class="sig-name descname"><span class="pre">total_count</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#ibxcli.core.query.QueryResult.total_count" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-ibxcli.objects.base">
+<span id="ibxcli-objects-base"></span><h3><code class="docutils literal notranslate"><span class="pre">ibxcli.objects.base</span></code><a class="headerlink" href="#module-ibxcli.objects.base" title="Link to this heading"></a></h3>
+<p>Base class for all NIOS object handlers.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="ibxcli.objects.base.ObjectHandler">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ibxcli.objects.base.</span></span><span class="sig-name descname"><span class="pre">ObjectHandler</span></span><a class="reference internal" href="_modules/ibxcli/objects/base.html#ObjectHandler"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ibxcli.objects.base.ObjectHandler" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></p>
+<p>Base class for all NIOS object type handlers.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="ibxcli.objects.base.ObjectHandler.build_search_filters">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">build_search_filters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="_modules/ibxcli/objects/base.html#ObjectHandler.build_search_filters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ibxcli.objects.base.ObjectHandler.build_search_filters" title="Link to this definition"></a></dt>
+<dd><p>Translate CLI keyword arguments into WAPI search dict.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ibxcli.objects.base.ObjectHandler.default_return_fields">
+<span class="sig-name descname"><span class="pre">default_return_fields</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ibxcli.objects.base.ObjectHandler.default_return_fields" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ibxcli.objects.base.ObjectHandler.display_name">
+<span class="sig-name descname"><span class="pre">display_name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#ibxcli.objects.base.ObjectHandler.display_name" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ibxcli.objects.base.ObjectHandler.obj_type">
+<span class="sig-name descname"><span class="pre">obj_type</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#ibxcli.objects.base.ObjectHandler.obj_type" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-ibxcli.formatters.base">
+<span id="ibxcli-formatters-base"></span><h3><code class="docutils literal notranslate"><span class="pre">ibxcli.formatters.base</span></code><a class="headerlink" href="#module-ibxcli.formatters.base" title="Link to this heading"></a></h3>
+<p>Formatter base class and registry.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="ibxcli.formatters.base.BaseFormatter">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ibxcli.formatters.base.</span></span><span class="sig-name descname"><span class="pre">BaseFormatter</span></span><a class="reference internal" href="_modules/ibxcli/formatters/base.html#BaseFormatter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ibxcli.formatters.base.BaseFormatter" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></p>
+<p>Output formatter interface.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="ibxcli.formatters.base.BaseFormatter.render">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">render</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">records</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fields</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/ibxcli/formatters/base.html#BaseFormatter.render"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ibxcli.formatters.base.BaseFormatter.render" title="Link to this definition"></a></dt>
+<dd><p>Render records to a string.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ibxcli.formatters.base.get_formatter">
+<span class="sig-prename descclassname"><span class="pre">ibxcli.formatters.base.</span></span><span class="sig-name descname"><span class="pre">get_formatter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#ibxcli.formatters.base.BaseFormatter" title="ibxcli.formatters.base.BaseFormatter"><span class="pre">BaseFormatter</span></a></span></span><a class="reference internal" href="_modules/ibxcli/formatters/base.html#get_formatter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ibxcli.formatters.base.get_formatter" title="Link to this definition"></a></dt>
+<dd><p>Get a formatter instance by name.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ibxcli.formatters.base.register_formatter">
+<span class="sig-prename descclassname"><span class="pre">ibxcli.formatters.base.</span></span><span class="sig-name descname"><span class="pre">register_formatter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ibxcli/formatters/base.html#register_formatter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ibxcli.formatters.base.register_formatter" title="Link to this definition"></a></dt>
+<dd><p>Decorator to register a formatter class.</p>
+</dd></dl>
+
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="commands/search.html" class="btn btn-neutral float-left" title="Search Command" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, ibx-cli contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

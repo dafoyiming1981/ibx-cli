@@ -25,3 +25,9 @@ dev = [
     "ruff>=0.4.0",
     "mypy>=1.10",
 ]
+docs = [
+    "sphinx>=7.0",
+    "sphinx-rtd-theme>=2.0",
+    "myst-parser>=3.0",
+    "sphinx-click>=6.0",
+]

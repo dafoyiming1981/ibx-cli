@@ -1,0 +1,254 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ibx-cli Documentation &mdash; ibx-cli 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Why ibx-cli" href="why-ibxcli.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="#" class="icon icon-home">
+            ibx-cli
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="why-ibxcli.html">Why ibx-cli</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Commands</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="commands/config.html">Config Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commands/dns.html">DNS Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commands/dhcp.html">DHCP Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commands/infra.html">Infrastructure Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commands/search.html">Search Command</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">ibx-cli</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">ibx-cli Documentation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/index.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="ibx-cli-documentation">
+<h1>ibx-cli Documentation<a class="headerlink" href="#ibx-cli-documentation" title="Link to this heading"></a></h1>
+<p>Infoblox NIOS CLI toolset for DNS/DHCP management via WAPI.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>CLI (click) → ObjectHandler → QueryExecutor → IbxClient → infoblox_client → WAPI
+</pre></div>
+</div>
+<section id="quick-start">
+<h2>Quick Start<a class="headerlink" href="#quick-start" title="Link to this heading"></a></h2>
+<section id="installation">
+<h3>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h3>
+<p><strong>Via git + pip:</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/dafoyiming1981/ibx-cli.git
+<span class="nb">cd</span><span class="w"> </span>ibx-cli
+pip3.12<span class="w"> </span>install<span class="w"> </span>--user<span class="w"> </span>-e<span class="w"> </span>.
+</pre></div>
+</div>
+<p><strong>Via install script:</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>bash<span class="w"> </span>install_ibxcli.sh
+<span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;alias ibx=&quot;$HOME/.local/bin/ibx&quot;&#39;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>~/.bashrc
+<span class="nb">source</span><span class="w"> </span>~/.bashrc
+</pre></div>
+</div>
+<p>Verify:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ibx<span class="w"> </span>--version
+</pre></div>
+</div>
+</section>
+<section id="configuration">
+<h3>Configuration<a class="headerlink" href="#configuration" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ibx<span class="w"> </span>config<span class="w"> </span>init
+vi<span class="w"> </span>~/.infoblox/config
+chmod<span class="w"> </span><span class="m">600</span><span class="w"> </span>~/.infoblox/config
+</pre></div>
+</div>
+<p>Example config:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">defaults</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10.x.x.x</span>
+<span class="w">  </span><span class="nt">username</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">admin</span>
+<span class="w">  </span><span class="nt">password</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">your_password</span>
+<span class="w">  </span><span class="nt">wapi_version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;2.13&quot;</span>
+<span class="w">  </span><span class="nt">ssl_verify</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<span class="w">  </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span>
+<span class="w">  </span><span class="nt">max_results</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1000</span>
+
+<span class="nt">profiles</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">prod</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">infoblox-prod.example.com</span>
+<span class="w">  </span><span class="nt">lab</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">infoblox-lab.example.com</span>
+</pre></div>
+</div>
+</section>
+<section id="cli-usage">
+<h3>CLI Usage<a class="headerlink" href="#cli-usage" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ibx<span class="w"> </span>config<span class="w"> </span>test-connection
+ibx<span class="w"> </span>dns<span class="w"> </span>zones
+ibx<span class="w"> </span>dhcp<span class="w"> </span>networks
+</pre></div>
+</div>
+</section>
+</section>
+<section id="why-ibx-cli">
+<h2>Why ibx-cli<a class="headerlink" href="#why-ibx-cli" title="Link to this heading"></a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="why-ibxcli.html">Why ibx-cli</a></li>
+</ul>
+</div>
+</section>
+<section id="command-reference">
+<h2>Command Reference<a class="headerlink" href="#command-reference" title="Link to this heading"></a></h2>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Commands</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="commands/config.html">Config Commands</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="commands/config.html#ibx-config-init"><code class="docutils literal notranslate"><span class="pre">ibx</span> <span class="pre">config</span> <span class="pre">init</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="commands/config.html#ibx-config-show"><code class="docutils literal notranslate"><span class="pre">ibx</span> <span class="pre">config</span> <span class="pre">show</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="commands/config.html#ibx-config-test-connection"><code class="docutils literal notranslate"><span class="pre">ibx</span> <span class="pre">config</span> <span class="pre">test-connection</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="commands/config.html#related-commands">Related Commands</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="commands/dns.html">DNS Commands</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="commands/dns.html#ibx-dns-zones"><code class="docutils literal notranslate"><span class="pre">ibx</span> <span class="pre">dns</span> <span class="pre">zones</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="commands/dns.html#ibx-dns-a"><code class="docutils literal notranslate"><span class="pre">ibx</span> <span class="pre">dns</span> <span class="pre">a</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="commands/dns.html#ibx-dns-aaaa"><code class="docutils literal notranslate"><span class="pre">ibx</span> <span class="pre">dns</span> <span class="pre">aaaa</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="commands/dns.html#ibx-dns-cname"><code class="docutils literal notranslate"><span class="pre">ibx</span> <span class="pre">dns</span> <span class="pre">cname</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="commands/dns.html#ibx-dns-mx"><code class="docutils literal notranslate"><span class="pre">ibx</span> <span class="pre">dns</span> <span class="pre">mx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="commands/dns.html#ibx-dns-ns"><code class="docutils literal notranslate"><span class="pre">ibx</span> <span class="pre">dns</span> <span class="pre">ns</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="commands/dns.html#ibx-dns-txt"><code class="docutils literal notranslate"><span class="pre">ibx</span> <span class="pre">dns</span> <span class="pre">txt</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="commands/dns.html#ibx-dns-ptr"><code class="docutils literal notranslate"><span class="pre">ibx</span> <span class="pre">dns</span> <span class="pre">ptr</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="commands/dns.html#ibx-dns-hosts"><code class="docutils literal notranslate"><span class="pre">ibx</span> <span class="pre">dns</span> <span class="pre">hosts</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="commands/dns.html#ibx-dns-all-records"><code class="docutils literal notranslate"><span class="pre">ibx</span> <span class="pre">dns</span> <span class="pre">all-records</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="commands/dhcp.html">DHCP Commands</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="commands/dhcp.html#ibx-dhcp-networks"><code class="docutils literal notranslate"><span class="pre">ibx</span> <span class="pre">dhcp</span> <span class="pre">networks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="commands/dhcp.html#ibx-dhcp-ipv6-networks"><code class="docutils literal notranslate"><span class="pre">ibx</span> <span class="pre">dhcp</span> <span class="pre">ipv6-networks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="commands/dhcp.html#ibx-dhcp-containers"><code class="docutils literal notranslate"><span class="pre">ibx</span> <span class="pre">dhcp</span> <span class="pre">containers</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="commands/dhcp.html#ibx-dhcp-fixed-address"><code class="docutils literal notranslate"><span class="pre">ibx</span> <span class="pre">dhcp</span> <span class="pre">fixed-address</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="commands/dhcp.html#ibx-dhcp-ipv4-addresses"><code class="docutils literal notranslate"><span class="pre">ibx</span> <span class="pre">dhcp</span> <span class="pre">ipv4-addresses</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="commands/dhcp.html#ibx-dhcp-ranges"><code class="docutils literal notranslate"><span class="pre">ibx</span> <span class="pre">dhcp</span> <span class="pre">ranges</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="commands/dhcp.html#ibx-dhcp-leases"><code class="docutils literal notranslate"><span class="pre">ibx</span> <span class="pre">dhcp</span> <span class="pre">leases</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="commands/infra.html">Infrastructure Commands</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="commands/infra.html#ibx-infra-grid"><code class="docutils literal notranslate"><span class="pre">ibx</span> <span class="pre">infra</span> <span class="pre">grid</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="commands/infra.html#ibx-infra-members"><code class="docutils literal notranslate"><span class="pre">ibx</span> <span class="pre">infra</span> <span class="pre">members</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="commands/infra.html#ibx-infra-views"><code class="docutils literal notranslate"><span class="pre">ibx</span> <span class="pre">infra</span> <span class="pre">views</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="commands/infra.html#ibx-infra-network-views"><code class="docutils literal notranslate"><span class="pre">ibx</span> <span class="pre">infra</span> <span class="pre">network-views</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="commands/search.html">Search Command</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="commands/search.html#ibx-search"><code class="docutils literal notranslate"><span class="pre">ibx</span> <span class="pre">search</span></code></a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="architecture">
+<h2>Architecture<a class="headerlink" href="#architecture" title="Link to this heading"></a></h2>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#core-modules">Core Modules</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="indices-and-tables">
+<h2>Indices and Tables<a class="headerlink" href="#indices-and-tables" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="why-ibxcli.html" class="btn btn-neutral float-right" title="Why ibx-cli" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, ibx-cli contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

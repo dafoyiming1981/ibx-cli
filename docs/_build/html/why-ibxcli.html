@@ -1,0 +1,317 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Why ibx-cli &mdash; ibx-cli 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Config Commands" href="commands/config.html" />
+    <link rel="prev" title="ibx-cli Documentation" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            ibx-cli
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Why ibx-cli</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#why-do-we-need-ibx-cli">Why do we need ibx-cli?</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pain-point-1-tree-style-gui-navigation-makes-lookup-inefficient">Pain Point 1: Tree-style GUI navigation makes lookup inefficient</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pain-point-2-configuration-extraction-and-diffing-is-difficult">Pain Point 2: Configuration extraction and diffing is difficult</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pain-point-3-no-quick-status-checks-for-upgrades-and-maintenance">Pain Point 3: No quick status checks for upgrades and maintenance</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#real-world-scenarios">Real-World Scenarios</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#scenario-1-a-colleague-asks-about-vlan-assignments">Scenario 1: A colleague asks about VLAN assignments</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#scenario-2-quickly-locate-dns-records-and-verify-changes">Scenario 2: Quickly locate DNS records and verify changes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#scenario-3-pre-upgrade-ha-health-check">Scenario 3: Pre-upgrade HA health check</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#ibx-cli-vs-infoblox-gui">ibx-cli vs Infoblox GUI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#architecture">Architecture</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Commands</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="commands/config.html">Config Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commands/dns.html">DNS Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commands/dhcp.html">DHCP Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commands/infra.html">Infrastructure Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commands/search.html">Search Command</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">ibx-cli</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Why ibx-cli</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/why-ibxcli.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="why-ibx-cli">
+<h1>Why ibx-cli<a class="headerlink" href="#why-ibx-cli" title="Link to this heading"></a></h1>
+<p>ibx-cli is a command-line tool built for COD teams to manage Infoblox NIOS DNS/DHCP infrastructure. It interacts directly with the Infoblox Grid via WAPI, compressing operations that would take multiple GUI clicks into a single command with flat, actionable output.</p>
+<section id="why-do-we-need-ibx-cli">
+<h2>Why do we need ibx-cli?<a class="headerlink" href="#why-do-we-need-ibx-cli" title="Link to this heading"></a></h2>
+<section id="pain-point-1-tree-style-gui-navigation-makes-lookup-inefficient">
+<h3>Pain Point 1: Tree-style GUI navigation makes lookup inefficient<a class="headerlink" href="#pain-point-1-tree-style-gui-navigation-makes-lookup-inefficient" title="Link to this heading"></a></h3>
+<p>In the Infoblox web interface, information is organized in a <strong>hierarchical tree</strong>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>IPAM → Network View → 10.0.0.0/8 → 10.10.0.0/16 → 10.10.5.0/24 → Ranges
+  ↓
+DNS → Zone Auth → example.com → Records → Next Page → Next Page
+  ↓
+Network Services → DHCP → Leases → Filter → Next Page
+</pre></div>
+</div>
+<p>To answer “Which networks are under VLAN 200? What DHCP ranges does each one have?”, you would:</p>
+<ol class="arabic simple">
+<li><p>Open the IPAM view</p></li>
+<li><p>Select the Network View</p></li>
+<li><p>Expand the network hierarchy</p></li>
+<li><p>Click into each subnet</p></li>
+<li><p>Check extensible attributes on each subnet</p></li>
+<li><p>Click into the Ranges tab</p></li>
+<li><p>Go back, repeat steps 4-6</p></li>
+<li><p>Manually compare findings in the browser</p></li>
+</ol>
+<p><strong>With ibx-cli:</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ibx<span class="w"> </span>dhcp<span class="w"> </span>networks<span class="w"> </span>--vlan<span class="w"> </span><span class="m">200</span><span class="w"> </span>--with-ranges
+</pre></div>
+</div>
+<p>A single command produces the full tree view — networks with their ranges nested underneath, each annotated with failover association, DDNS status, and VLAN/Zone/Site attributes. Output goes straight to the terminal and can be piped to <code class="docutils literal notranslate"><span class="pre">grep</span></code>, <code class="docutils literal notranslate"><span class="pre">less</span></code>, or <code class="docutils literal notranslate"><span class="pre">jq</span></code>.</p>
+</section>
+<section id="pain-point-2-configuration-extraction-and-diffing-is-difficult">
+<h3>Pain Point 2: Configuration extraction and diffing is difficult<a class="headerlink" href="#pain-point-2-configuration-extraction-and-diffing-is-difficult" title="Link to this heading"></a></h3>
+<p>Day-to-day operations often require comparing configurations across environments or before/after changes:</p>
+<ul class="simple">
+<li><p>“What’s different between Prod and Lab DNS zone configs?”</p></li>
+<li><p>“Which DHCP range failover settings changed after this deployment?”</p></li>
+<li><p>“Snapshot all grid member HA states before the upgrade.”</p></li>
+</ul>
+<p><strong>GUI approach:</strong> Screenshot each page or transcribe manually, then compare in Excel.</p>
+<p><strong>ibx-cli approach:</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Export prod environment network config</span>
+ibx<span class="w"> </span>--profile<span class="w"> </span>prod<span class="w"> </span>dhcp<span class="w"> </span>networks<span class="w"> </span>--format<span class="w"> </span>json<span class="w"> </span>&gt;<span class="w"> </span>prod-networks.json
+
+<span class="c1"># Export lab environment network config</span>
+ibx<span class="w"> </span>--profile<span class="w"> </span>lab<span class="w"> </span>dhcp<span class="w"> </span>networks<span class="w"> </span>--format<span class="w"> </span>json<span class="w"> </span>&gt;<span class="w"> </span>lab-networks.json
+
+<span class="c1"># Diff them directly</span>
+diff<span class="w"> </span>&lt;<span class="o">(</span>jq<span class="w"> </span>.<span class="w"> </span>prod-networks.json<span class="o">)</span><span class="w"> </span>&lt;<span class="o">(</span>jq<span class="w"> </span>.<span class="w"> </span>lab-networks.json<span class="o">)</span>
+</pre></div>
+</div>
+<p>JSON/CSV output formats enable version-controlled configs, automated auditing, and CI/CD pipeline integration.</p>
+</section>
+<section id="pain-point-3-no-quick-status-checks-for-upgrades-and-maintenance">
+<h3>Pain Point 3: No quick status checks for upgrades and maintenance<a class="headerlink" href="#pain-point-3-no-quick-status-checks-for-upgrades-and-maintenance" title="Link to this heading"></a></h3>
+<p>Before upgrading a Grid Member, operators need to confirm:</p>
+<ul class="simple">
+<li><p>What is the current HA state? Which node is active, which is passive?</p></li>
+<li><p>Which network ranges rely on failover? Will the upgrade impact DHCP service?</p></li>
+<li><p>Is DNS resolution working correctly after the change?</p></li>
+</ul>
+<p><strong>GUI approach:</strong> Check each member in Grid → Members page individually, then switch to the Network page to verify range associations.</p>
+<p><strong>ibx-cli approach:</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># See all member HA states at a glance</span>
+ibx<span class="w"> </span>infra<span class="w"> </span>members
+
+<span class="c1"># Example output:</span>
+<span class="c1"># grid-master.example.com  platform: IB-4030</span>
+<span class="c1">#   Node 1  ha_status: active</span>
+<span class="c1">#   Node 2  ha_status: passive</span>
+
+<span class="c1"># Check range and failover associations for a VLAN</span>
+ibx<span class="w"> </span>dhcp<span class="w"> </span>networks<span class="w"> </span>--vlan<span class="w"> </span><span class="m">200</span><span class="w"> </span>--with-ranges
+
+<span class="c1"># Capture before/after state and diff</span>
+ibx<span class="w"> </span>dns<span class="w"> </span>a<span class="w"> </span>--name<span class="w"> </span><span class="s2">&quot;app.example.com&quot;</span><span class="w"> </span>--format<span class="w"> </span>json<span class="w"> </span>&gt;<span class="w"> </span>before.json
+<span class="c1"># ... perform the change ...</span>
+ibx<span class="w"> </span>dns<span class="w"> </span>a<span class="w"> </span>--name<span class="w"> </span><span class="s2">&quot;app.example.com&quot;</span><span class="w"> </span>--format<span class="w"> </span>json<span class="w"> </span>&gt;<span class="w"> </span>after.json
+diff<span class="w"> </span>&lt;<span class="o">(</span>jq<span class="w"> </span>.<span class="w"> </span>before.json<span class="o">)</span><span class="w"> </span>&lt;<span class="o">(</span>jq<span class="w"> </span>.<span class="w"> </span>after.json<span class="o">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="real-world-scenarios">
+<h2>Real-World Scenarios<a class="headerlink" href="#real-world-scenarios" title="Link to this heading"></a></h2>
+<section id="scenario-1-a-colleague-asks-about-vlan-assignments">
+<h3>Scenario 1: A colleague asks about VLAN assignments<a class="headerlink" href="#scenario-1-a-colleague-asks-about-vlan-assignments" title="Link to this heading"></a></h3>
+<blockquote>
+<div><p>“Can you check what networks are configured for VLAN 200?”</p>
+</div></blockquote>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ibx<span class="w"> </span>dhcp<span class="w"> </span>networks<span class="w"> </span>--vlan<span class="w"> </span><span class="m">200</span>
+</pre></div>
+</div>
+<p>Output includes network CIDR, comments, and custom attributes like VLAN, Zone, and Site — all in one flat view.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Need to see DHCP ranges under those networks too?</span>
+ibx<span class="w"> </span>dhcp<span class="w"> </span>networks<span class="w"> </span>--vlan<span class="w"> </span><span class="m">200</span><span class="w"> </span>--with-ranges
+</pre></div>
+</div>
+</section>
+<section id="scenario-2-quickly-locate-dns-records-and-verify-changes">
+<h3>Scenario 2: Quickly locate DNS records and verify changes<a class="headerlink" href="#scenario-2-quickly-locate-dns-records-and-verify-changes" title="Link to this heading"></a></h3>
+<blockquote>
+<div><p>“Has the A record for app-v2.example.com been updated?”</p>
+</div></blockquote>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Before the change</span>
+ibx<span class="w"> </span>dns<span class="w"> </span>a<span class="w"> </span>--name<span class="w"> </span><span class="s2">&quot;app-v2.example.com&quot;</span>
+
+<span class="c1"># After the change</span>
+ibx<span class="w"> </span>dns<span class="w"> </span>a<span class="w"> </span>--name<span class="w"> </span><span class="s2">&quot;app-v2.example.com&quot;</span>
+
+<span class="c1"># Not sure of the exact name? Use regex</span>
+ibx<span class="w"> </span>dns<span class="w"> </span>a<span class="w"> </span>--regex<span class="w"> </span>--name<span class="w"> </span><span class="s2">&quot;app.*example\.com&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="scenario-3-pre-upgrade-ha-health-check">
+<h3>Scenario 3: Pre-upgrade HA health check<a class="headerlink" href="#scenario-3-pre-upgrade-ha-health-check" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Confirm HA roles for all members</span>
+ibx<span class="w"> </span>infra<span class="w"> </span>members
+
+<span class="c1"># Check which ranges depend on failover</span>
+ibx<span class="w"> </span>dhcp<span class="w"> </span>networks<span class="w"> </span>--with-ranges<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-i<span class="w"> </span>failover
+
+<span class="c1"># Verify current Grid version</span>
+ibx<span class="w"> </span>infra<span class="w"> </span>grid
+</pre></div>
+</div>
+</section>
+</section>
+<section id="ibx-cli-vs-infoblox-gui">
+<h2>ibx-cli vs Infoblox GUI<a class="headerlink" href="#ibx-cli-vs-infoblox-gui" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Dimension</p></th>
+<th class="head"><p>Infoblox GUI</p></th>
+<th class="head"><p>ibx-cli</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Navigation</p></td>
+<td><p>Tree hierarchy, multi-page jumps</p></td>
+<td><p>Flat output, single command</p></td>
+</tr>
+<tr class="row-odd"><td><p>Filtering</p></td>
+<td><p>Fixed forms, limited combinations</p></td>
+<td><p>Arbitrary parameter combos, OR/AND logic</p></td>
+</tr>
+<tr class="row-even"><td><p>Batch ops</p></td>
+<td><p>Page-by-page manual review</p></td>
+<td><p>Pipe to grep/jq/awk</p></td>
+</tr>
+<tr class="row-odd"><td><p>Config export</p></td>
+<td><p>Screenshots or manual notes</p></td>
+<td><p>Direct JSON/CSV output</p></td>
+</tr>
+<tr class="row-even"><td><p>Diffing</p></td>
+<td><p>Excel or visual comparison</p></td>
+<td><p>Automated with <code class="docutils literal notranslate"><span class="pre">diff</span></code>, <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">diff</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Automation</p></td>
+<td><p>No integration path</p></td>
+<td><p>Scriptable, CI/CD-ready</p></td>
+</tr>
+<tr class="row-even"><td><p>Learning curve</p></td>
+<td><p>Requires familiarity with UI layout</p></td>
+<td><p>Familiar CLI experience</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="architecture">
+<h2>Architecture<a class="headerlink" href="#architecture" title="Link to this heading"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>CLI (click) → ObjectHandler → QueryExecutor → IbxClient → infoblox_client → WAPI
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><strong>ObjectHandler</strong>: Registry pattern — each NIOS object type has a handler class that translates CLI arguments into WAPI search filters</p></li>
+<li><p><strong>QueryExecutor</strong>: Builds queries, handles pagination, applies server-side and client-side filtering and sorting</p></li>
+<li><p><strong>IbxClient</strong>: Lightweight wrapper around the infoblox-client SDK</p></li>
+<li><p><strong>Formatters</strong>: table (Rich), JSON, CSV output formats</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="ibx-cli Documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="commands/config.html" class="btn btn-neutral float-right" title="Config Commands" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, ibx-cli contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

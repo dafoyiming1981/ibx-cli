@@ -1,0 +1,212 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ibxcli.core.client &mdash; ibx-cli 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            ibx-cli
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Commands</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../commands/config.html">Config Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../commands/dns.html">DNS Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../commands/dhcp.html">DHCP Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../commands/infra.html">Infrastructure Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../commands/search.html">Search Command</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">ibx-cli</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">ibxcli.core.client</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for ibxcli.core.client</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;WAPI client wrapper around infoblox_client.connector.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">infoblox_client</span><span class="w"> </span><span class="kn">import</span> <span class="n">connector</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">infoblox_client.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">InfobloxConnectionError</span><span class="p">,</span>
+    <span class="n">InfobloxException</span><span class="p">,</span>
+    <span class="n">InfobloxBadWAPICredential</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">ibxcli.core.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConnectionConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ibxcli.core.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">IbxAuthError</span><span class="p">,</span> <span class="n">IbxConnectionError</span><span class="p">,</span> <span class="n">IbxWapiError</span>
+
+
+<div class="viewcode-block" id="IbxClient">
+<a class="viewcode-back" href="../../../api.html#ibxcli.core.client.IbxClient">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">IbxClient</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Thin wrapper around infoblox_client.connector.Connector.</span>
+
+<span class="sd">    Provides automatic pagination, return field control, and error translation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">ConnectionConfig</span><span class="p">):</span>
+        <span class="n">opts</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;host&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">host</span><span class="p">,</span>
+            <span class="s2">&quot;username&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+            <span class="s2">&quot;password&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">password</span><span class="p">,</span>
+            <span class="s2">&quot;wapi_version&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">wapi_version</span><span class="p">,</span>
+            <span class="s2">&quot;ssl_verify&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">ssl_verify</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_connector</span> <span class="o">=</span> <span class="n">connector</span><span class="o">.</span><span class="n">Connector</span><span class="p">(</span><span class="n">opts</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">IbxConnectionError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to initialize connector: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_max_results</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">max_results</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_timeout</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">timeout</span>
+
+<div class="viewcode-block" id="IbxClient.get">
+<a class="viewcode-back" href="../../../api.html#ibxcli.core.client.IbxClient.get">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">obj_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">search_fields</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">return_fields</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">max_results</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Fetch objects from WAPI with automatic pagination.&quot;&quot;&quot;</span>
+        <span class="n">kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">return_fields</span><span class="p">:</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;return_fields&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">return_fields</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;max_results&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">max_results</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_max_results</span>
+
+        <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;paging&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connector</span><span class="o">.</span><span class="n">get_object</span><span class="p">(</span>
+                <span class="n">obj_type</span><span class="p">,</span> <span class="n">search_fields</span> <span class="ow">or</span> <span class="p">{},</span> <span class="o">**</span><span class="n">kwargs</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">result</span>
+        <span class="k">except</span> <span class="n">InfobloxConnectionError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">IbxConnectionError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Connection error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+        <span class="k">except</span> <span class="n">InfobloxBadWAPICredential</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">IbxAuthError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Authentication failed for </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_connector</span><span class="o">.</span><span class="n">host</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+        <span class="k">except</span> <span class="n">InfobloxException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">err_text</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s2">&quot;401&quot;</span> <span class="ow">in</span> <span class="n">err_text</span> <span class="ow">or</span> <span class="s2">&quot;403&quot;</span> <span class="ow">in</span> <span class="n">err_text</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">IbxAuthError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Authentication failed for </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_connector</span><span class="o">.</span><span class="n">host</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+            <span class="k">raise</span> <span class="n">IbxWapiError</span><span class="p">(</span><span class="n">code</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span> <span class="n">wapi_code</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">wapi_text</span><span class="o">=</span><span class="n">err_text</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">IbxConnectionError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unexpected error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span></div>
+
+
+<div class="viewcode-block" id="IbxClient.raw_get">
+<a class="viewcode-back" href="../../../api.html#ibxcli.core.client.IbxClient.raw_get">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">raw_get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Direct pass-through to connector.get_object for edge cases.&quot;&quot;&quot;</span>
+        <span class="n">search</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;search&quot;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connector</span><span class="o">.</span><span class="n">get_object</span><span class="p">(</span><span class="n">obj_type</span><span class="p">,</span> <span class="n">search</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">connector</span><span class="o">.</span><span class="n">InfobloxException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">IbxWapiError</span><span class="p">(</span><span class="n">code</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span> <span class="n">wapi_text</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span></div>
+
+
+<div class="viewcode-block" id="IbxClient.call_func">
+<a class="viewcode-back" href="../../../api.html#ibxcli.core.client.IbxClient.call_func">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">call_func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">ref</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Call a WAPI function on an object reference.&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connector</span><span class="o">.</span><span class="n">call_func</span><span class="p">(</span><span class="n">func_name</span><span class="p">,</span> <span class="n">ref</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">connector</span><span class="o">.</span><span class="n">InfobloxException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">IbxWapiError</span><span class="p">(</span><span class="n">code</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span> <span class="n">wapi_text</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span></div>
+
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">connector</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Expose the underlying connector for advanced operations.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connector</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, ibx-cli contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
