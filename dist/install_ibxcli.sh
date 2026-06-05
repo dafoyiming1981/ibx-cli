@@ -1398,6 +1398,9 @@ class QueryExecutor:
 
     def execute(self, params: QueryParams) -> QueryResult:
         """Execute the query and apply post-processing."""
+        from rich.console import Console
+        _dbg = Console(stderr=True)
+        _dbg.print(f"[yellow][DEBUG] execute() called: obj_type={params.obj_type}, return_fields={params.return_fields}[/yellow]")
         search = dict(params.search_filters)
 
         # Build API return_fields: strip pseudo-fields that require post-processing
