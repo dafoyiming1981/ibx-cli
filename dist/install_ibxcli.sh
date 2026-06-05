@@ -1405,7 +1405,6 @@ class QueryExecutor:
         has_extattrs = [f for f in (params.return_fields or []) if f in extattr_fields]
         pseudo_fields = {"member_assignment", "next_available_ipv4address", "next_available_ipv6address"}
         api_fields = [f for f in params.return_fields if f not in extattr_fields and f not in pseudo_fields] if params.return_fields else []
-        # member/failover_association are only valid on range objects
         if params.obj_type == "range" and params.return_fields and any(f in pseudo_fields for f in params.return_fields):
             for wf in ("member", "failover_association"):
                 if wf not in api_fields:
@@ -1525,24 +1524,12 @@ class QueryExecutor:
                         result = self._client.call_func(
                             "nextavailableip", ref, num=1
                         )
-                        import logging
-                        logger = logging.getLogger("ibxcli")
-                        logger.debug(f"nextavailableip result for {ref}: {result!r}")
-                        # WAPI returns {"ips": [{"ip": "..."}]} or {"ips": []}
-                        if isinstance(result, dict):
-                            ips = result.get("ips", [])
-                        elif isinstance(result, list):
-                            ips = result
-                        else:
-                            ips = []
-                        if ips:
-                            first_ip = ips[0].get("ip", "") if isinstance(ips[0], dict) else str(ips[0])
-                            records[idx][ip_field] = first_ip
+                        if result and "ips" in result and result["ips"]:
+                            records[idx][ip_field] = result["ips"][0].get("ip", "")
                         else:
                             records[idx][ip_field] = "No available IP"
-                    except Exception as e:
-                        logger.warning(f"nextavailableip failed for {ref}: {e}")
-                        records[idx][ip_field] = f"Error: {e}"
+                    except Exception:
+                        records[idx][ip_field] = "No available IP"
 
         # Build display fields from handler defaults, removing _ref
         if params.return_fields:
