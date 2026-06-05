@@ -234,8 +234,6 @@ def networks(ctx, network, network_view, with_ranges, vlan, zone, site, **kwargs
         network=network, network_view=network_view,
         vlan=vlan or None, zone=zone or None, site=site or None,
     )
-    import sys
-    print(f"DEBUG: with_ranges={with_ranges}, filters={filters}", file=sys.stderr)
     if with_ranges:
         _render_networks_with_ranges(ctx, handler, filters, **kwargs)
     else:
@@ -272,13 +270,12 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
         Console(stderr=True).print("[yellow]No networks found.[/yellow]")
         return
 
-    # Fetch ranges grouped by network CIDR — inherit extattrs filters from parent
+    # Collect network CIDRs we already found — WAPI doesn't support extattrs
+    # on range objects, so we fetch all ranges for matching networks.
+    network_cidrs = {r.get("network") for r in net_result.records if r.get("network")}
+
     range_filters = range_handler.build_search_filters(
-        network=filters.get("network"),
         network_view=filters.get("network_view"),
-        vlan=filters.get("*VLAN"),
-        zone=filters.get("*Zone"),
-        site=filters.get("*Site"),
     )
     range_params = ctx.obj["executor"].build_params(
         obj_type=range_handler.obj_type,
@@ -292,24 +289,12 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
         Console(stderr=True).print(f"[red]Error fetching ranges:[/red] {e}")
         sys.exit(1)
 
-    # DEBUG
-    import json
-    Console(stderr=True).print(f"[debug] Networks returned: {len(net_result.records)}")
-    Console(stderr=True).print(f"[debug] Ranges returned: {len(range_result.records)}")
-    if range_result.records:
-        Console(stderr=True).print(f"[debug] First range keys: {list(range_result.records[0].keys())}")
-        Console(stderr=True).print(f"[debug] First range raw: {json.dumps(range_result.records[0], default=str)}")
-    # Index ranges by network CIDR
+    # Index ranges by network CIDR — only for networks we already found
     ranges_by_network = {}
     for r in range_result.records:
-        raw_net = r.get("network", "")
         net_cidr = _extract_range_cidr(r)
-        Console(stderr=True).print(f"[debug] range network raw={raw_net!r} extracted={net_cidr!r}")
-        if net_cidr:
+        if net_cidr and net_cidr in network_cidrs:
             ranges_by_network.setdefault(net_cidr, []).append(r)
-    Console(stderr=True).print(f"[debug] ranges_by_network keys: {list(ranges_by_network.keys())}")
-    if net_result.records:
-        Console(stderr=True).print(f"[debug] First network network={net_result.records[0].get('network')!r}")
 
     # Render
     import shutil
