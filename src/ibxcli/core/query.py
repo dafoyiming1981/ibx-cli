@@ -221,7 +221,7 @@ class QueryExecutor:
                 if ref:
                     try:
                         result = self._client.call_func(
-                            "nextavailableip", ref, num=1
+                            "nextavailableip", ref, payload={"num": 1}
                         )
                         if result and "ips" in result and result["ips"]:
                             records[idx][ip_field] = result["ips"][0].get("ip", "")
