@@ -1523,21 +1523,29 @@ class QueryExecutor:
             ip_field = "next_available_ipv4address" if params.obj_type == "network" else "next_available_ipv6address"
             from rich.console import Console
             _dbg = Console(stderr=True)
-            _dbg.print(f"[yellow][DEBUG] next_available_ip: {len(records)} records, {len(net_refs)} refs[/yellow]")
+            _dbg.print(f"[yellow][DEBUG] next_available_ip: {len(records)} records, {len(net_refs)} refs, record_types={[type(r).__name__ for r in records[:3]]}[/yellow]")
             for idx, ref in enumerate(net_refs):
                 if ref:
+                    _dbg.print(f"[yellow][DEBUG] idx={idx} ref={ref[:60]}...[/yellow]")
                     try:
                         result = self._client.call_func(
                             "next_available_ip", ref, payload={"num": 1}
                         )
-                        _dbg.print(f"[yellow][DEBUG] idx={idx} ref={ref[:60]}... result={result!r}[/yellow]")
-                        if result and "ips" in result and result["ips"]:
-                            records[idx][ip_field] = result["ips"][0].get("ip", "")
+                        _dbg.print(f"[yellow][DEBUG] result type={type(result).__name__}, result={result!r}[/yellow]")
+                        if isinstance(result, dict) and "ips" in result and result["ips"]:
+                            first = result["ips"][0]
+                            ip_val = first.get("ip", "") if isinstance(first, dict) else str(first)
+                            if isinstance(records[idx], dict):
+                                records[idx][ip_field] = ip_val
+                            else:
+                                _dbg.print(f"[red][DEBUG] records[{idx}] is {type(records[idx]).__name__}, skipping[/red]")
                         else:
-                            records[idx][ip_field] = "No available IP"
+                            if isinstance(records[idx], dict):
+                                records[idx][ip_field] = "No available IP"
                     except Exception as e:
                         _dbg.print(f"[red][DEBUG] idx={idx} error={type(e).__name__}: {e}[/red]")
-                        records[idx][ip_field] = f"Error: {e}"
+                        if isinstance(records[idx], dict):
+                            records[idx][ip_field] = f"Error: {e}"
 
         # Build display fields from handler defaults, removing _ref
         if params.return_fields:
