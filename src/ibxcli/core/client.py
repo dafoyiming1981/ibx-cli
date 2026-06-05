@@ -9,6 +9,7 @@ from infoblox_client.exceptions import (
     InfobloxConnectionError,
     InfobloxException,
     InfobloxBadWAPICredential,
+    InfobloxFuncException,
 )
 
 from ibxcli.core.config import ConnectionConfig
