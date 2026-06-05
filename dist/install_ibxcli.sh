@@ -1545,10 +1545,10 @@ class QueryExecutor:
                         else:
                             if isinstance(records[idx], dict):
                                 records[idx][ip_field] = "No available IP"
-                    except Exception as e:
-                        _dbg.print(f"[red][DEBUG] idx={idx} error={type(e).__name__}: {e}[/red]")
+                    except Exception:
+                        # WAPI throws error when no IPs available — treat as "No available IP"
                         if isinstance(records[idx], dict):
-                            records[idx][ip_field] = f"Error: {e}"
+                            records[idx][ip_field] = "No available IP"
 
         # Build display fields from handler defaults, removing _ref
         if params.return_fields:
