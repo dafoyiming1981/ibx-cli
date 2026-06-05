@@ -1106,7 +1106,9 @@ class IbxClient:
         """Call a WAPI function on an object reference."""
         try:
             return self._connector.call_func(func_name, ref, **kwargs)
-        except connector.InfobloxException as e:
+        except InfobloxFuncException as e:
+            raise IbxWapiError(code=400, wapi_text=str(e)) from e
+        except InfobloxException as e:
             raise IbxWapiError(code=400, wapi_text=str(e)) from e
 
     @property
