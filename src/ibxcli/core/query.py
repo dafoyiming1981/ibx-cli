@@ -104,7 +104,8 @@ class QueryExecutor:
         has_extattrs = [f for f in (params.return_fields or []) if f in extattr_fields]
         pseudo_fields = {"member_assignment", "next_available_ipv4address", "next_available_ipv6address"}
         api_fields = [f for f in params.return_fields if f not in extattr_fields and f not in pseudo_fields] if params.return_fields else []
-        if params.return_fields and any(f in pseudo_fields for f in params.return_fields):
+        # member/failover_association are only valid on range objects
+        if params.obj_type == "range" and params.return_fields and any(f in pseudo_fields for f in params.return_fields):
             for wf in ("member", "failover_association"):
                 if wf not in api_fields:
                     api_fields.append(wf)
