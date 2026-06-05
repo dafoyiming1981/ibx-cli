@@ -1427,6 +1427,7 @@ class QueryExecutor:
         net_refs = []
         if params.obj_type in ("network", "ipv6network"):
             net_refs = [r.get("_ref", "") for r in records]
+            logger.debug(f"[nextavailableip] records count={len(records)}, refs_with_value={sum(1 for r in net_refs if r)}")
 
         # Post-process: extract extensible attributes, remove _ref and extattrs
         for record in records:
@@ -1518,18 +1519,23 @@ class QueryExecutor:
         # Resolve next available IP for network objects
         if params.obj_type in ("network", "ipv6network"):
             ip_field = "next_available_ipv4address" if params.obj_type == "network" else "next_available_ipv6address"
+            import logging
+            logger = logging.getLogger("ibxcli")
+            logger.debug(f"[nextavailableip] net_refs count={len(net_refs)}, obj_type={params.obj_type}")
             for idx, ref in enumerate(net_refs):
                 if ref:
                     try:
                         result = self._client.call_func(
-                            "nextavailableip", ref, payload={"num": 1}
+                            "next_available_ip", ref, payload={"num": 1}
                         )
+                        logger.debug(f"[nextavailableip] ref={ref[:40]}... result={result!r}")
                         if result and "ips" in result and result["ips"]:
                             records[idx][ip_field] = result["ips"][0].get("ip", "")
                         else:
                             records[idx][ip_field] = "No available IP"
-                    except Exception:
-                        records[idx][ip_field] = "No available IP"
+                    except Exception as e:
+                        logger.warning(f"[nextavailableip] ref={ref[:40]}... error={e!r}")
+                        records[idx][ip_field] = f"Error: {e}"
 
         # Build display fields from handler defaults, removing _ref
         if params.return_fields:
