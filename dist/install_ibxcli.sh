@@ -230,6 +230,8 @@ def networks(ctx, network, network_view, with_ranges, vlan, zone, site, **kwargs
         network=network, network_view=network_view,
         vlan=vlan or None, zone=zone or None, site=site or None,
     )
+    import sys
+    print(f"DEBUG: with_ranges={with_ranges}, filters={filters}", file=sys.stderr)
     if with_ranges:
         _render_networks_with_ranges(ctx, handler, filters, **kwargs)
     else:
