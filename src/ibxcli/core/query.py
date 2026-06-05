@@ -2,7 +2,24 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
+
+
+def _extract_cidr_from_range(record: dict) -> str:
+    """Extract plain CIDR from a range record's ``network`` field.
+
+    WAPI returns range ``network`` as an object reference like
+    ``"network/ZG5zLm5ldHdvcmsk...:10.0.0.0/24/default"``.
+    Returns ``"10.0.0.0/24"`` or empty string if not parseable.
+    """
+    net = record.get("network", "")
+    if not net:
+        return ""
+    if "/" in net and ":" in net and not net[0].isdigit():
+        # Reference format: "network/REF:10.0.0.0/24/default"
+        return net.split(":", 1)[1].rsplit("/", 1)[0]
+    return net
 
 
 @dataclass
@@ -179,7 +196,7 @@ class QueryExecutor:
                 # Collect unique network CIDRs from ranges
                 net_cidrs = set()
                 for record in records:
-                    cidr = record.get("network", "")
+                    cidr = _extract_cidr_from_range(record)
                     if cidr:
                         net_cidrs.add(cidr)
 
@@ -201,7 +218,7 @@ class QueryExecutor:
 
                 # Inherit missing extattrs from parent network
                 for record in records:
-                    cidr = record.get("network", "")
+                    cidr = _extract_cidr_from_range(record)
                     parent_ea = network_extattrs.get(cidr, {})
                     for f in net_ea_fields:
                         if not record.get(f):

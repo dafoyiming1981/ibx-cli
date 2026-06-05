@@ -183,10 +183,29 @@ PYEOF
 cat > "$SRC_DIR/cli/dhcp.py" << 'PYEOF'
 """DHCP command group."""
 
+import sys
+
 import click
 
 from ibxcli.cli.main import execute_and_render, output_options
 from ibxcli.objects import HANDLERS
+
+
+def _extract_range_cidr(record: dict) -> str:
+    """Extract CIDR from a range record's ``network`` field.
+
+    The WAPI ``network`` field on range objects returns an object reference
+    like ``"network/ZG5zLm5ldHdvcmsk...:10.0.0.0/24/default"``.
+    This function returns the plain CIDR portion (``"10.0.0.0/24"``),
+    handling both reference strings and plain CIDR values.
+    """
+    net = record.get("network", "")
+    if not net:
+        return ""
+    if "/" in net and ":" in net and not net[0].isdigit():
+        # Reference format: "network/REF:10.0.0.0/24/default"
+        return net.split(":", 1)[1].rsplit("/", 1)[0]
+    return net
 
 
 @click.group()
@@ -249,7 +268,8 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
 
     # Fetch ranges grouped by network CIDR — inherit extattrs filters from parent
     range_filters = range_handler.build_search_filters(
-        network_view=ctx.params.get("network_view"),
+        network=filters.get("network"),
+        network_view=filters.get("network_view"),
         vlan=filters.get("*VLAN"),
         zone=filters.get("*Zone"),
         site=filters.get("*Site"),
@@ -269,7 +289,7 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
     # Index ranges by network CIDR
     ranges_by_network = {}
     for r in range_result.records:
-        net_cidr = r.get("network", "")
+        net_cidr = _extract_range_cidr(r)
         if net_cidr:
             ranges_by_network.setdefault(net_cidr, []).append(r)
 
@@ -490,7 +510,7 @@ def _render_ranges_by_extattrs(ctx, vlan, zone, site, network, network_view, **k
         return
 
     # Filter ranges to matching networks
-    filtered = [r for r in range_result.records if r.get("network") in matching_cidrs]
+    filtered = [r for r in range_result.records if _extract_range_cidr(r) in matching_cidrs]
 
     # Apply user limit/sort to filtered results
     user_limit = ctx.params.get("limit")
@@ -520,6 +540,7 @@ def leases(ctx, network, network_view, **kwargs):
     handler = HANDLERS["lease"]
     filters = handler.build_search_filters(network=network, network_view=network_view)
     execute_and_render(ctx, "lease", filters, **kwargs)
+
 
 PYEOF
 
@@ -1306,7 +1327,24 @@ cat > "$SRC_DIR/core/query.py" << 'PYEOF'
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
+
+
+def _extract_cidr_from_range(record: dict) -> str:
+    """Extract plain CIDR from a range record's ``network`` field.
+
+    WAPI returns range ``network`` as an object reference like
+    ``"network/ZG5zLm5ldHdvcmsk...:10.0.0.0/24/default"``.
+    Returns ``"10.0.0.0/24"`` or empty string if not parseable.
+    """
+    net = record.get("network", "")
+    if not net:
+        return ""
+    if "/" in net and ":" in net and not net[0].isdigit():
+        # Reference format: "network/REF:10.0.0.0/24/default"
+        return net.split(":", 1)[1].rsplit("/", 1)[0]
+    return net
 
 
 @dataclass
@@ -1483,7 +1521,7 @@ class QueryExecutor:
                 # Collect unique network CIDRs from ranges
                 net_cidrs = set()
                 for record in records:
-                    cidr = record.get("network", "")
+                    cidr = _extract_cidr_from_range(record)
                     if cidr:
                         net_cidrs.add(cidr)
 
@@ -1505,7 +1543,7 @@ class QueryExecutor:
 
                 # Inherit missing extattrs from parent network
                 for record in records:
-                    cidr = record.get("network", "")
+                    cidr = _extract_cidr_from_range(record)
                     parent_ea = network_extattrs.get(cidr, {})
                     for f in net_ea_fields:
                         if not record.get(f):
@@ -1555,6 +1593,7 @@ class QueryExecutor:
             fields=fields,
             total_count=len(records),
         )
+
 
 PYEOF
 
