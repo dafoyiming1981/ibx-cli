@@ -1427,7 +1427,6 @@ class QueryExecutor:
         net_refs = []
         if params.obj_type in ("network", "ipv6network"):
             net_refs = [r.get("_ref", "") for r in records]
-            logger.debug(f"[nextavailableip] records count={len(records)}, refs_with_value={sum(1 for r in net_refs if r)}")
 
         # Post-process: extract extensible attributes, remove _ref and extattrs
         for record in records:
@@ -1521,20 +1520,20 @@ class QueryExecutor:
             ip_field = "next_available_ipv4address" if params.obj_type == "network" else "next_available_ipv6address"
             from rich.console import Console
             _dbg = Console(stderr=True)
-            _dbg.print(f"[dim][nextavailableip] obj_type={params.obj_type}, records={len(records)}, refs={len(net_refs)}[/dim]")
+            _dbg.print(f"[yellow][DEBUG] next_available_ip: {len(records)} records, {len(net_refs)} refs[/yellow]")
             for idx, ref in enumerate(net_refs):
                 if ref:
                     try:
                         result = self._client.call_func(
                             "next_available_ip", ref, payload={"num": 1}
                         )
-                        _dbg.print(f"[dim][nextavailableip] idx={idx} result={result!r}[/dim]")
+                        _dbg.print(f"[yellow][DEBUG] idx={idx} ref={ref[:60]}... result={result!r}[/yellow]")
                         if result and "ips" in result and result["ips"]:
                             records[idx][ip_field] = result["ips"][0].get("ip", "")
                         else:
                             records[idx][ip_field] = "No available IP"
                     except Exception as e:
-                        _dbg.print(f"[dim][nextavailableip] idx={idx} error={type(e).__name__}: {e}[/dim]")
+                        _dbg.print(f"[red][DEBUG] idx={idx} error={type(e).__name__}: {e}[/red]")
                         records[idx][ip_field] = f"Error: {e}"
 
         # Build display fields from handler defaults, removing _ref
