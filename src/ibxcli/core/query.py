@@ -224,12 +224,24 @@ class QueryExecutor:
                         result = self._client.call_func(
                             "nextavailableip", ref, num=1
                         )
-                        if result and "ips" in result and result["ips"]:
-                            records[idx][ip_field] = result["ips"][0].get("ip", "")
+                        import logging
+                        logger = logging.getLogger("ibxcli")
+                        logger.debug(f"nextavailableip result for {ref}: {result!r}")
+                        # WAPI returns {"ips": [{"ip": "..."}]} or {"ips": []}
+                        if isinstance(result, dict):
+                            ips = result.get("ips", [])
+                        elif isinstance(result, list):
+                            ips = result
+                        else:
+                            ips = []
+                        if ips:
+                            first_ip = ips[0].get("ip", "") if isinstance(ips[0], dict) else str(ips[0])
+                            records[idx][ip_field] = first_ip
                         else:
                             records[idx][ip_field] = "No available IP"
-                    except Exception:
-                        records[idx][ip_field] = "No available IP"
+                    except Exception as e:
+                        logger.warning(f"nextavailableip failed for {ref}: {e}")
+                        records[idx][ip_field] = f"Error: {e}"
 
         # Build display fields from handler defaults, removing _ref
         if params.return_fields:
