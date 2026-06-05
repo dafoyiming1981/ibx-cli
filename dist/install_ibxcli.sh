@@ -1403,7 +1403,7 @@ class QueryExecutor:
         # Build API return_fields: strip pseudo-fields that require post-processing
         extattr_fields = {"EONID", "VLAN", "L2", "Zone", "Site"}
         has_extattrs = [f for f in (params.return_fields or []) if f in extattr_fields]
-        pseudo_fields = {"member_assignment"}
+        pseudo_fields = {"member_assignment", "next_available_ipv4address", "next_available_ipv6address"}
         api_fields = [f for f in params.return_fields if f not in extattr_fields and f not in pseudo_fields] if params.return_fields else []
         if params.return_fields and any(f in pseudo_fields for f in params.return_fields):
             for wf in ("member", "failover_association"):
