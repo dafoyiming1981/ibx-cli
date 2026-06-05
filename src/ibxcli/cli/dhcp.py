@@ -103,12 +103,24 @@ def _render_networks_with_ranges(ctx, handler, filters, **kwargs):
         Console(stderr=True).print(f"[red]Error fetching ranges:[/red] {e}")
         sys.exit(1)
 
+    # DEBUG
+    import json
+    Console(stderr=True).print(f"[debug] Networks returned: {len(net_result.records)}")
+    Console(stderr=True).print(f"[debug] Ranges returned: {len(range_result.records)}")
+    if range_result.records:
+        Console(stderr=True).print(f"[debug] First range keys: {list(range_result.records[0].keys())}")
+        Console(stderr=True).print(f"[debug] First range raw: {json.dumps(range_result.records[0], default=str)}")
     # Index ranges by network CIDR
     ranges_by_network = {}
     for r in range_result.records:
+        raw_net = r.get("network", "")
         net_cidr = _extract_range_cidr(r)
+        Console(stderr=True).print(f"[debug] range network raw={raw_net!r} extracted={net_cidr!r}")
         if net_cidr:
             ranges_by_network.setdefault(net_cidr, []).append(r)
+    Console(stderr=True).print(f"[debug] ranges_by_network keys: {list(ranges_by_network.keys())}")
+    if net_result.records:
+        Console(stderr=True).print(f"[debug] First network network={net_result.records[0].get('network')!r}")
 
     # Render
     import shutil
