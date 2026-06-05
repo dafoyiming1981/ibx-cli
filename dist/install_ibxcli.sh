@@ -1519,22 +1519,22 @@ class QueryExecutor:
         # Resolve next available IP for network objects
         if params.obj_type in ("network", "ipv6network"):
             ip_field = "next_available_ipv4address" if params.obj_type == "network" else "next_available_ipv6address"
-            import logging
-            logger = logging.getLogger("ibxcli")
-            logger.debug(f"[nextavailableip] net_refs count={len(net_refs)}, obj_type={params.obj_type}")
+            from rich.console import Console
+            _dbg = Console(stderr=True)
+            _dbg.print(f"[dim][nextavailableip] obj_type={params.obj_type}, records={len(records)}, refs={len(net_refs)}[/dim]")
             for idx, ref in enumerate(net_refs):
                 if ref:
                     try:
                         result = self._client.call_func(
                             "next_available_ip", ref, payload={"num": 1}
                         )
-                        logger.debug(f"[nextavailableip] ref={ref[:40]}... result={result!r}")
+                        _dbg.print(f"[dim][nextavailableip] idx={idx} result={result!r}[/dim]")
                         if result and "ips" in result and result["ips"]:
                             records[idx][ip_field] = result["ips"][0].get("ip", "")
                         else:
                             records[idx][ip_field] = "No available IP"
                     except Exception as e:
-                        logger.warning(f"[nextavailableip] ref={ref[:40]}... error={e!r}")
+                        _dbg.print(f"[dim][nextavailableip] idx={idx} error={type(e).__name__}: {e}[/dim]")
                         records[idx][ip_field] = f"Error: {e}"
 
         # Build display fields from handler defaults, removing _ref
