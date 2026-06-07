@@ -37,10 +37,6 @@ python3.12 -m pip install click rich pyyaml infoblox-client --quiet --trusted-ho
 # --- Step 2: Deploy source files ---
 echo "[2/3] Deploying source files..."
 
-# Clear stale bytecode so Python loads updated source
-find "$INSTALL_DIR" -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
-find "$INSTALL_DIR" -name "*.pyc" -delete 2>/dev/null || true
-
 mkdir -p "$SRC_DIR/cli" "$SRC_DIR/core" "$SRC_DIR/formatters" "$SRC_DIR/objects" "$SRC_DIR/utils"
 mkdir -p "$BIN_DIR"
 
@@ -543,7 +539,6 @@ def leases(ctx, network, network_view, **kwargs):
     handler = HANDLERS["lease"]
     filters = handler.build_search_filters(network=network, network_view=network_view)
     execute_and_render(ctx, "lease", filters, **kwargs)
-
 
 PYEOF
 
@@ -1596,7 +1591,6 @@ class QueryExecutor:
             fields=fields,
             total_count=len(records),
         )
-
 
 PYEOF
 
