@@ -68,10 +68,13 @@ Write-Host "Installed: $ibxVersion" -ForegroundColor Green
 
 # Config directory
 $configDir = Join-Path $env:USERPROFILE ".infoblox"
-if (-not (Test-Path $configDir)) {
-    New-Item -ItemType Directory -Path $configDir | Out-Null
-    Write-Host "`nConfig directory created: $configDir" -ForegroundColor Yellow
-    Write-Host "Create your config file at: $configDir\config" -ForegroundColor Yellow
+$configFilePath = Join-Path $configDir "config"
+if (-not (Test-Path $configFilePath)) {
+    if (-not (Test-Path $configDir)) {
+        New-Item -ItemType Directory -Path $configDir | Out-Null
+    }
+    Write-Host "`nConfig directory: $configDir" -ForegroundColor Yellow
+    Write-Host "Create your config file at: $configFilePath" -ForegroundColor Yellow
 }
 
 Write-Host "`n=== Installation Complete ===" -ForegroundColor Green
