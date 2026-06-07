@@ -353,6 +353,76 @@ ibx --profile prod dns zones
 
 ---
 
+---
+
+## 容器部署 (Linux / Podman)
+
+无需 root 权限，通过 Podman rootless 模式运行。
+
+### 构建和推送
+
+```bash
+# 使用自动构建脚本 (自动构建 wheel + 镜像 + 推送到 Artifactory)
+bash scripts/build_and_push.sh 0.1.0
+
+# 或者手动分步执行
+python3 -m build --wheel
+podman build -t artifactory.company.com/ibx-cli:0.1.0 -f Containerfile .
+podman push artifactory.company.com/ibx-cli:0.1.0
+```
+
+### 使用容器
+
+```bash
+# 通过配置文件 (推荐)
+podman run --rm -v ~/.infoblox/config:/home/ibx/.infoblox/config:Z \
+  artifactory.company.com/ibx-cli:0.1.0 dns zones
+
+# 通过环境变量 (快速测试)
+podman run --rm \
+  -e IBX_HOST=10.0.0.2 -e IBX_USERNAME=admin -e IBX_PASSWORD=secret \
+  artifactory.company.com/ibx-cli:0.1.0 dns a
+
+# 调试模式 (进入容器 shell)
+podman run --rm -it --entrypoint /bin/sh artifactory.company.com/ibx-cli:0.1.0
+```
+
+---
+
+## Windows 安装
+
+通过 PowerShell 脚本在 Windows 上创建虚拟环境并安装。
+
+### 前置条件
+
+- Python 3.9+ 已安装 (https://www.python.org/downloads/)
+
+### 安装步骤
+
+1. 克隆仓库或下载源码
+
+2. 运行安装脚本：
+
+```powershell
+.\scripts\install_windows.ps1
+```
+
+3. 激活虚拟环境：
+
+```powershell
+. $HOME\ibx-env\Scripts\Activate.ps1
+```
+
+4. 验证安装：
+
+```powershell
+ibx --version
+```
+
+配置文件位于 `%USERPROFILE%\.infoblox\config`，格式与 Linux 相同。
+
+---
+
 ## 支持的 WAPI 版本
 
 NIOS 9.0.8 → WAPI v2.13.x
