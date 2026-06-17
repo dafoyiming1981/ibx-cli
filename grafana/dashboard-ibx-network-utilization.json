@@ -22,7 +22,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "blue" },
+          "color": { "mode": "thresholds" },
           "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }
         }
       }
@@ -97,7 +97,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "blue" },
+          "color": { "mode": "fixed", "fixedColor": "blue" },
           "unit": "short"
         }
       }

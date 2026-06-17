@@ -22,7 +22,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "blue" }
+          "color": { "mode": "fixed", "fixedColor": "blue" }
         }
       }
     },
@@ -41,7 +41,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "green" },
+          "color": { "mode": "fixed", "fixedColor": "green" },
           "unit": "short"
         }
       }
@@ -61,7 +61,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "purple" }
+          "color": { "mode": "fixed", "fixedColor": "purple" }
         }
       }
     },
