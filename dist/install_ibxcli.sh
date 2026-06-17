@@ -781,7 +781,7 @@ def zone_records(ctx, zone, view, output_format, output):
         params = ctx.obj["executor"].build_params(
             obj_type=handler.obj_type,
             search_filters=filters,
-            default_fields=handler.default_return_fields,
+            default_fields=["name", "type", "address", "view", "zone", "ttl"],
         )
         try:
             result = ctx.obj["executor"].execute(params)
