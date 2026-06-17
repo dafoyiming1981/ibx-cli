@@ -540,6 +540,58 @@ def leases(ctx, network, network_view, **kwargs):
     filters = handler.build_search_filters(network=network, network_view=network_view)
     execute_and_render(ctx, "lease", filters, **kwargs)
 
+
+@dhcp.command("utilization")
+@click.option("--vlan", multiple=True, required=True, help="VLAN filter (repeatable, e.g. --vlan 100 --vlan 200)")
+@click.option("--zone", multiple=True, required=True, help="Zone filter (repeatable)")
+@click.option("--format", "output_format", type=click.Choice(["table", "json", "csv", "prometheus"]), default="prometheus", help="Output format")
+@click.option("--output", type=click.Path(), default=None, help="Write output to file instead of stdout")
+@click.option("--limit", type=int, default=None, help="Max networks to query (default: all)")
+@click.pass_context
+def utilization(ctx, vlan, zone, output_format, output, limit):
+    """Export network utilization for Grafana/Prometheus.
+
+    Queries networks filtered by VLAN and Zone, outputs utilization
+    metrics in Prometheus text exposition format.
+    """
+    from pathlib import Path
+
+    from ibxcli.cli.main import _ensure_client
+    from ibxcli.formatters.base import get_formatter
+    from rich.console import Console
+
+    _ensure_client(ctx)
+
+    handler = HANDLERS["network"]
+    filters = handler.build_search_filters(vlan=vlan, zone=zone)
+
+    params = ctx.obj["executor"].build_params(
+        obj_type=handler.obj_type,
+        search_filters=filters,
+        default_fields=handler.default_return_fields,
+    )
+    params.limit = limit
+
+    try:
+        result = ctx.obj["executor"].execute(params)
+    except Exception as e:
+        Console(stderr=True).print(f"[red]Error:[/red] {e}")
+        sys.exit(1)
+
+    if not result.records:
+        Console(stderr=True).print("[yellow]No networks found.[/yellow]")
+        return
+
+    formatter = get_formatter(output_format)
+    rendered = formatter.render(result.records, result.fields)
+
+    if output:
+        Path(output).parent.mkdir(parents=True, exist_ok=True)
+        Path(output).write_text(rendered)
+        Console().print(f"[green]Written {len(result.records)} network metrics to {output}[/green]")
+    else:
+        Console().print(rendered, soft_wrap=True)
+
 PYEOF
 
 # ===== ibxcli/cli/dns.py =====
@@ -842,7 +894,7 @@ console = Console(stderr=True)
 
 def output_options(f):
     """Decorator adding --format, --fields, --limit, --sort to a command."""
-    f = click.option("--format", "output_format", type=click.Choice(["table", "json", "csv"]), default="table", help="Output format")(f)
+    f = click.option("--format", "output_format", type=click.Choice(["table", "json", "csv", "prometheus"]), default="table", help="Output format")(f)
     f = click.option("--fields", help="Comma-separated fields to display")(f)
     f = click.option("--limit", type=int, default=None, help="Max rows to display (default: all)")(f)
     f = click.option("--sort", help="Sort results by field")(f)
@@ -1629,7 +1681,7 @@ def register_formatter(name: str):
 
 def get_formatter(name: str) -> BaseFormatter:
     """Get a formatter instance by name."""
-    from ibxcli.formatters import table, json_fmt, csv_fmt  # noqa: F401
+    from ibxcli.formatters import table, json_fmt, csv_fmt, prometheus_fmt  # noqa: F401
     cls = FORMATTERS.get(name)
     if cls is None:
         raise ValueError(f"Unknown format: {name}")
@@ -1679,6 +1731,71 @@ class JsonFormatter(BaseFormatter):
         if fields:
             records = [{k: v for k, v in r.items() if k in fields} for r in records]
         return json.dumps(records, indent=2, ensure_ascii=False)
+
+PYEOF
+
+# ===== ibxcli/formatters/prometheus_fmt.py =====
+cat > "$SRC_DIR/formatters/prometheus_fmt.py" << 'PYEOF'
+"""Prometheus text format exporter."""
+
+from __future__ import annotations
+
+from ibxcli.formatters.base import BaseFormatter, register_formatter
+
+
+def _sanitize_label(value: str) -> str:
+    """Escape double quotes and backslashes for Prometheus label values."""
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
+@register_formatter("prometheus")
+class PrometheusFormatter(BaseFormatter):
+    """Render network utilization records as Prometheus text exposition format."""
+
+    def render(self, records: list[dict], fields: list[str] | None) -> str:
+        lines: list[str] = []
+
+        lines.append("# HELP ibx_network_utilization_percent Network utilization percentage (0-100)")
+        lines.append("# TYPE ibx_network_utilization_percent gauge")
+        lines.append("# HELP ibx_network_total_ips Total IPs in the network")
+        lines.append("# TYPE ibx_network_total_ips gauge")
+        lines.append("# HELP ibx_network_used_ips Used IPs in the network")
+        lines.append("# TYPE ibx_network_used_ips gauge")
+
+        for rec in records:
+            network = rec.get("network", "")
+            utilization = rec.get("utilization", 0)
+            vlan = rec.get("VLAN", "")
+            zone = rec.get("Zone", "")
+            site = rec.get("Site", "")
+            members = rec.get("members", "")
+
+            label_set = f'network="{_sanitize_label(network)}"'
+            if vlan:
+                label_set += f',vlan="{_sanitize_label(vlan)}"'
+            if zone:
+                label_set += f',zone="{_sanitize_label(zone)}"'
+            if site:
+                label_set += f',site="{_sanitize_label(site)}"'
+            if members:
+                label_set += f',members="{_sanitize_label(members)}"'
+
+            lines.append(f"ibx_network_utilization_percent{{{label_set}}} {utilization}")
+
+            cidr_parts = network.split("/")
+            if len(cidr_parts) == 2:
+                try:
+                    prefix = int(cidr_parts[1])
+                    total_ips = 2 ** (32 - prefix) - 2
+                    if total_ips > 0:
+                        used_ips = round(total_ips * utilization / 100)
+                        lines.append(f"ibx_network_total_ips{{{label_set}}} {total_ips}")
+                        lines.append(f"ibx_network_used_ips{{{label_set}}} {used_ips}")
+                except ValueError:
+                    pass
+
+        lines.append("")
+        return "\n".join(lines)
 
 PYEOF
 
@@ -1806,7 +1923,7 @@ from ibxcli.objects.base import ObjectHandler
 class NetworkHandler(ObjectHandler):
     obj_type = "network"
     display_name = "IPv4 Networks"
-    default_return_fields = ["network", "next_available_ipv4address", "members", "VLAN", "L2", "Zone", "Site", "comment"]
+    default_return_fields = ["network", "utilization", "next_available_ipv4address", "members", "VLAN", "L2", "Zone", "Site", "comment"]
 
     def build_search_filters(self, network=None, network_view=None, vlan=None, zone=None, site=None):
         filters = {}

@@ -128,3 +128,37 @@ List DHCP leases.
 ```bash
 ibx dhcp leases --state active --limit 50
 ```
+
+## `ibx dhcp utilization`
+
+Export network utilization metrics for Grafana/Prometheus dashboards. Queries networks filtered by VLAN and Zone, outputs utilization percentage (integer 0-100), total IPs, and used IPs.
+
+| Option | Description |
+|--------|-------------|
+| `--vlan` | VLAN filter (repeatable, **required**) |
+| `--zone` | Zone filter (repeatable, **required**) |
+| `--format` | Output format: `prometheus` (default), `table`, `json`, `csv` |
+| `--output` | Write output to file instead of stdout |
+| `--limit` | Max networks to query (default: all) |
+
+```bash
+ibx dhcp utilization --vlan 100 --zone DC1
+ibx dhcp utilization --vlan 100 --vlan 200 --zone DC1 --zone DC2 --format prometheus
+ibx dhcp utilization --vlan 100 --zone DC1 --format prometheus --output /var/lib/node_exporter/ibx_utilization.prom
+```
+
+### Prometheus Output
+
+```
+# HELP ibx_network_utilization_percent Network utilization percentage (0-100)
+# TYPE ibx_network_utilization_percent gauge
+ibx_network_utilization_percent{network="10.0.0.0/24",vlan="100",zone="DC1"} 73
+ibx_network_total_ips{network="10.0.0.0/24",vlan="100",zone="DC1"} 254
+ibx_network_used_ips{network="10.0.0.0/24",vlan="100",zone="DC1"} 185
+```
+
+### Cron Usage
+
+```
+0 2 * * * ibx dhcp utilization --vlan 100 --vlan 200 --zone DC1 --format prometheus --output /var/lib/node_exporter/ibx_utilization.prom
+```

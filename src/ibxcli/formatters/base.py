@@ -26,7 +26,7 @@ def register_formatter(name: str):
 
 def get_formatter(name: str) -> BaseFormatter:
     """Get a formatter instance by name."""
-    from ibxcli.formatters import table, json_fmt, csv_fmt  # noqa: F401
+    from ibxcli.formatters import table, json_fmt, csv_fmt, prometheus_fmt  # noqa: F401
     cls = FORMATTERS.get(name)
     if cls is None:
         raise ValueError(f"Unknown format: {name}")

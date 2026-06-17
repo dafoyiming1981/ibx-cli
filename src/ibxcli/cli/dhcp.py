@@ -356,3 +356,55 @@ def leases(ctx, network, network_view, **kwargs):
     handler = HANDLERS["lease"]
     filters = handler.build_search_filters(network=network, network_view=network_view)
     execute_and_render(ctx, "lease", filters, **kwargs)
+
+
+@dhcp.command("utilization")
+@click.option("--vlan", multiple=True, required=True, help="VLAN filter (repeatable, e.g. --vlan 100 --vlan 200)")
+@click.option("--zone", multiple=True, required=True, help="Zone filter (repeatable)")
+@click.option("--format", "output_format", type=click.Choice(["table", "json", "csv", "prometheus"]), default="prometheus", help="Output format")
+@click.option("--output", type=click.Path(), default=None, help="Write output to file instead of stdout")
+@click.option("--limit", type=int, default=None, help="Max networks to query (default: all)")
+@click.pass_context
+def utilization(ctx, vlan, zone, output_format, output, limit):
+    """Export network utilization for Grafana/Prometheus.
+
+    Queries networks filtered by VLAN and Zone, outputs utilization
+    metrics in Prometheus text exposition format.
+    """
+    from pathlib import Path
+
+    from ibxcli.cli.main import _ensure_client
+    from ibxcli.formatters.base import get_formatter
+    from rich.console import Console
+
+    _ensure_client(ctx)
+
+    handler = HANDLERS["network"]
+    filters = handler.build_search_filters(vlan=vlan, zone=zone)
+
+    params = ctx.obj["executor"].build_params(
+        obj_type=handler.obj_type,
+        search_filters=filters,
+        default_fields=handler.default_return_fields,
+    )
+    params.limit = limit
+
+    try:
+        result = ctx.obj["executor"].execute(params)
+    except Exception as e:
+        Console(stderr=True).print(f"[red]Error:[/red] {e}")
+        sys.exit(1)
+
+    if not result.records:
+        Console(stderr=True).print("[yellow]No networks found.[/yellow]")
+        return
+
+    formatter = get_formatter(output_format)
+    rendered = formatter.render(result.records, result.fields)
+
+    if output:
+        Path(output).parent.mkdir(parents=True, exist_ok=True)
+        Path(output).write_text(rendered)
+        Console().print(f"[green]Written {len(result.records)} network metrics to {output}[/green]")
+    else:
+        Console().print(rendered, soft_wrap=True)
