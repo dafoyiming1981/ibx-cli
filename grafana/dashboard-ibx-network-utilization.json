@@ -281,7 +281,7 @@
           }
         }
       }
-    },
+    }
   ],
   "schemaVersion": 39,
   "tags": ["infoblox", "network", "utilization", "dhcp"],
