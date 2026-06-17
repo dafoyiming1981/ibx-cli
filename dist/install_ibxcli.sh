@@ -757,6 +757,75 @@ def all_records(ctx, zone, view, record_type, **kwargs):
     filters = handler.build_search_filters(zone=zone, view=view, type=record_type)
     execute_and_render(ctx, "allrecords", filters, **kwargs)
 
+
+@dns.command("zone-records")
+@click.option("--zone", multiple=True, required=True, help="Zone FQDN (repeatable)")
+@click.option("--view", help="DNS view filter")
+@click.option("--format", "output_format", type=click.Choice(["table", "json", "csv", "prometheus"]), default="prometheus", help="Output format")
+@click.option("--output", type=click.Path(), default=None, help="Write output to file")
+@click.pass_context
+def zone_records(ctx, zone, view, output_format, output):
+    """Count DNS records per type in a zone for Prometheus metrics."""
+    from pathlib import Path
+
+    from ibxcli.cli.main import _ensure_client
+    from rich.console import Console
+
+    _ensure_client(ctx)
+
+    handler = HANDLERS["allrecords"]
+    results = []
+
+    for z in zone:
+        filters = handler.build_search_filters(zone=z, view=view)
+        params = ctx.obj["executor"].build_params(
+            obj_type=handler.obj_type,
+            search_filters=filters,
+            default_fields=handler.default_return_fields,
+        )
+        try:
+            result = ctx.obj["executor"].execute(params)
+            type_counts = {}
+            for rec in result.records:
+                rtype = rec.get("type", "UNKNOWN")
+                type_counts[rtype] = type_counts.get(rtype, 0) + 1
+            for rtype, count in sorted(type_counts.items()):
+                results.append({"zone": z, "type": rtype, "count": count, "view": view or ""})
+        except Exception as e:
+            Console(stderr=True).print(f"[red]Error querying zone {z}: {e}[/red]")
+
+    if not results:
+        Console(stderr=True).print("[yellow]No records found.[/yellow]")
+        return
+
+    if output_format == "prometheus":
+        lines = []
+        for rec in results:
+            label_set = f'zone="{rec["zone"]}"'
+            if rec["view"]:
+                label_set += f',view="{rec["view"]}"'
+            label_set += f',type="{rec["type"]}"'
+            lines.append(f'ibx_dns_records_count{{{label_set}}} {rec["count"]}')
+
+        rendered_lines = [
+            "# HELP ibx_dns_records_count Number of DNS records in the zone",
+            "# TYPE ibx_dns_records_count gauge",
+        ]
+        rendered_lines.extend(lines)
+        rendered_lines.append("")
+        rendered = "\n".join(rendered_lines)
+    else:
+        from ibxcli.formatters.base import get_formatter
+        formatter = get_formatter(output_format)
+        rendered = formatter.render(results, ["zone", "type", "count", "view"])
+
+    if output:
+        Path(output).parent.mkdir(parents=True, exist_ok=True)
+        Path(output).write_text(rendered)
+        Console().print(f"[green]Written {len(results)} metrics to {output}[/green]")
+    else:
+        Console().print(rendered, soft_wrap=True)
+
 PYEOF
 
 # ===== ibxcli/cli/infra.py =====
