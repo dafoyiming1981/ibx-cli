@@ -32,16 +32,14 @@ def test_prometheus_formatter_ip_counts():
 
 
 def test_prometheus_formatter_help_spacing():
-    """Each metric should have its own HELP/TYPE block followed by a blank line."""
+    """HELP/TYPE should appear only once per metric, even with multiple records."""
     fmt = get_formatter("prometheus")
-    output = fmt.render(_sample_records()[:1], None)
+    output = fmt.render(_sample_records(), None)
     lines = output.split("\n")
-    # HELP should be immediately followed by TYPE
-    for i, line in enumerate(lines):
-        if line.startswith("# HELP"):
-            assert lines[i + 1].startswith("# TYPE"), f"TYPE missing after HELP at line {i}"
-    # Data lines should be separated by blank lines from HELP/TYPE blocks
-    assert "} 73.0\n" in output
+    help_count = sum(1 for l in lines if l.startswith("# HELP ibx_network_utilization_percent"))
+    type_count = sum(1 for l in lines if l.startswith("# TYPE ibx_network_utilization_percent"))
+    assert help_count == 1, f"Expected 1 HELP for utilization_percent, got {help_count}"
+    assert type_count == 1, f"Expected 1 TYPE for utilization_percent, got {type_count}"
 
 
 def test_prometheus_formatter_empty_records():
@@ -63,7 +61,7 @@ def test_prometheus_formatter_per_mille_to_percent():
     fmt = get_formatter("prometheus")
     records = [{"network": "10.0.0.0/25", "utilization": 920, "VLAN": "", "Zone": "", "Site": "", "members": ""}]
     output = fmt.render(records, None)
-    assert "} 92.0\n" in output
-    assert "} 126\n" in output
+    assert "ibx_network_utilization_percent{network=\"10.0.0.0/25\"} 92.0" in output
+    assert "ibx_network_total_ips{network=\"10.0.0.0/25\"} 126" in output
     used_line = [l for l in output.split("\n") if "ibx_network_used_ips" in l and "10.0.0.0/25" in l][0]
     assert "116" in used_line

@@ -31,6 +31,7 @@ class PrometheusFormatter(BaseFormatter):
 
     def render(self, records: list[dict], fields: list[str] | None) -> str:
         lines: list[str] = []
+        seen_metrics: set[str] = set()
 
         for rec in records:
             network = rec.get("network", "")
@@ -41,14 +42,13 @@ class PrometheusFormatter(BaseFormatter):
             members = rec.get("members", "")
 
             lbl = _label_set(network, vlan, zone, site, members)
-
-            # WAPI returns utilization as per-mille (0-1000), convert to percent (0-100)
             utilization_pct = round(utilization / 10, 1)
 
-            lines.append("# HELP ibx_network_utilization_percent Network utilization percentage (0-100)")
-            lines.append("# TYPE ibx_network_utilization_percent gauge")
+            if "ibx_network_utilization_percent" not in seen_metrics:
+                lines.append("# HELP ibx_network_utilization_percent Network utilization percentage (0-100)")
+                lines.append("# TYPE ibx_network_utilization_percent gauge")
+                seen_metrics.add("ibx_network_utilization_percent")
             lines.append(f"ibx_network_utilization_percent{lbl} {utilization_pct}")
-            lines.append("")
 
             cidr_parts = network.split("/")
             if len(cidr_parts) == 2:
@@ -57,14 +57,16 @@ class PrometheusFormatter(BaseFormatter):
                     total_ips = 2 ** (32 - prefix) - 2
                     if total_ips > 0:
                         used_ips = round(total_ips * utilization_pct / 100)
-                        lines.append("# HELP ibx_network_total_ips Total IPs in the network")
-                        lines.append("# TYPE ibx_network_total_ips gauge")
+                        if "ibx_network_total_ips" not in seen_metrics:
+                            lines.append("# HELP ibx_network_total_ips Total IPs in the network")
+                            lines.append("# TYPE ibx_network_total_ips gauge")
+                            seen_metrics.add("ibx_network_total_ips")
                         lines.append(f"ibx_network_total_ips{lbl} {total_ips}")
-                        lines.append("")
-                        lines.append("# HELP ibx_network_used_ips Used IPs in the network")
-                        lines.append("# TYPE ibx_network_used_ips gauge")
+                        if "ibx_network_used_ips" not in seen_metrics:
+                            lines.append("# HELP ibx_network_used_ips Used IPs in the network")
+                            lines.append("# TYPE ibx_network_used_ips gauge")
+                            seen_metrics.add("ibx_network_used_ips")
                         lines.append(f"ibx_network_used_ips{lbl} {used_ips}")
-                        lines.append("")
                 except ValueError:
                     pass
 
