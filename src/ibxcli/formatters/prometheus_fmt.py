@@ -42,7 +42,9 @@ class PrometheusFormatter(BaseFormatter):
             if members:
                 label_set += f',members="{_sanitize_label(members)}"'
 
-            lines.append(f"ibx_network_utilization_percent{{{label_set}}} {utilization}")
+            # WAPI returns utilization as per-mille (0-1000), convert to percent (0-100)
+            utilization_pct = round(utilization / 10, 1)
+            lines.append(f"ibx_network_utilization_percent{{{label_set}}} {utilization_pct}")
 
             cidr_parts = network.split("/")
             if len(cidr_parts) == 2:
@@ -50,7 +52,7 @@ class PrometheusFormatter(BaseFormatter):
                     prefix = int(cidr_parts[1])
                     total_ips = 2 ** (32 - prefix) - 2
                     if total_ips > 0:
-                        used_ips = round(total_ips * utilization / 100)
+                        used_ips = round(total_ips * utilization_pct / 100)
                         lines.append(f"ibx_network_total_ips{{{label_set}}} {total_ips}")
                         lines.append(f"ibx_network_used_ips{{{label_set}}} {used_ips}")
                 except ValueError:
