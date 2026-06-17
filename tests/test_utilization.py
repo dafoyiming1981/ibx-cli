@@ -31,11 +31,23 @@ def test_prometheus_formatter_ip_counts():
     assert "185" in used_line
 
 
+def test_prometheus_formatter_help_spacing():
+    """Each metric should have its own HELP/TYPE block followed by a blank line."""
+    fmt = get_formatter("prometheus")
+    output = fmt.render(_sample_records()[:1], None)
+    lines = output.split("\n")
+    # HELP should be immediately followed by TYPE
+    for i, line in enumerate(lines):
+        if line.startswith("# HELP"):
+            assert lines[i + 1].startswith("# TYPE"), f"TYPE missing after HELP at line {i}"
+    # Data lines should be separated by blank lines from HELP/TYPE blocks
+    assert "} 73.0\n" in output
+
+
 def test_prometheus_formatter_empty_records():
     fmt = get_formatter("prometheus")
     output = fmt.render([], None)
-    assert "# HELP" in output
-    assert "# TYPE" in output
+    assert output == ""
 
 
 def test_prometheus_formatter_no_vlan_zone():
