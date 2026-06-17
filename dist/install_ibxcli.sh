@@ -542,16 +542,17 @@ def leases(ctx, network, network_view, **kwargs):
 
 
 @dhcp.command("utilization")
-@click.option("--vlan", multiple=True, required=True, help="VLAN filter (repeatable, e.g. --vlan 100 --vlan 200)")
-@click.option("--zone", multiple=True, required=True, help="Zone filter (repeatable)")
+@click.option("--vlan", multiple=True, help="VLAN filter (repeatable, e.g. --vlan 100 --vlan 200)")
+@click.option("--zone", multiple=True, help="Zone filter (repeatable)")
+@click.option("--site", multiple=True, help="Site filter (repeatable)")
 @click.option("--format", "output_format", type=click.Choice(["table", "json", "csv", "prometheus"]), default="prometheus", help="Output format")
 @click.option("--output", type=click.Path(), default=None, help="Write output to file instead of stdout")
 @click.option("--limit", type=int, default=None, help="Max networks to query (default: all)")
 @click.pass_context
-def utilization(ctx, vlan, zone, output_format, output, limit):
+def utilization(ctx, vlan, zone, site, output_format, output, limit):
     """Export network utilization for Grafana/Prometheus.
 
-    Queries networks filtered by VLAN and Zone, outputs utilization
+    Queries networks filtered by VLAN/Zone/Site, outputs utilization
     metrics in Prometheus text exposition format.
     """
     from pathlib import Path
@@ -563,7 +564,9 @@ def utilization(ctx, vlan, zone, output_format, output, limit):
     _ensure_client(ctx)
 
     handler = HANDLERS["network"]
-    filters = handler.build_search_filters(vlan=vlan, zone=zone)
+    filters = handler.build_search_filters(
+        vlan=vlan or None, zone=zone or None, site=site or None,
+    )
 
     params = ctx.obj["executor"].build_params(
         obj_type=handler.obj_type,
