@@ -1,0 +1,328 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Total Networks",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "count(ibx_network_utilization_percent)",
+          "legendFormat": "Networks",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "blue" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Average Utilization",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "avg(ibx_network_utilization_percent)",
+          "legendFormat": "Avg %",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 60 },
+              { "color": "red", "value": 85 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "High Utilization (>80%)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "count(ibx_network_utilization_percent > 80)",
+          "legendFormat": "Count",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Total IPs in Use",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "sum(ibx_network_used_ips)",
+          "legendFormat": "IPs",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "blue" },
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Network Utilization Table",
+      "type": "table",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 4 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "ibx_network_utilization_percent",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 60 },
+              { "color": "red", "value": 85 }
+            ]
+          },
+          "unit": "percent",
+          "custom": {
+            "cellOptions": { "type": "color-background" },
+            "align": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Value" },
+            "properties": [
+              { "id": "custom.width", "value": 100 },
+              { "id": "displayName", "value": "Usage %" }
+            ]
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "__name__": true, "job": true, "instance": true },
+            "renameByName": {
+              "network": "Network CIDR",
+              "vlan": "VLAN",
+              "zone": "Zone",
+              "site": "Site",
+              "members": "Grid Member"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "IP Capacity by Network",
+      "type": "table",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "ibx_network_used_ips",
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "ibx_network_total_ips",
+          "instant": true,
+          "format": "table",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "align": "auto" }
+        }
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "__name__": true, "job": true, "instance": true },
+            "renameByName": {
+              "network": "Network CIDR",
+              "vlan": "VLAN",
+              "zone": "Zone",
+              "Value": "Used IPs",
+              "Value #B": "Total IPs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Utilization Trend",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 26 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "ibx_network_utilization_percent",
+          "legendFormat": "{{network}} VLAN={{vlan}}",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 60 },
+              { "color": "red", "value": 85 }
+            ]
+          },
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "id": 8,
+      "title": "Avg Utilization by Zone",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 36 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "avg by (zone) (ibx_network_utilization_percent)",
+          "legendFormat": "{{zone}}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": { "mode": "palette-classic" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 60 },
+              { "color": "red", "value": 85 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 9,
+      "title": "Utilization Distribution",
+      "type": "histogram",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 36 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "ibx_network_utilization_percent",
+          "legendFormat": "All Networks",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 60 },
+              { "color": "red", "value": 85 }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["infoblox", "network", "utilization", "dhcp"],
+  "templating": {
+    "list": [
+      {
+        "name": "zone",
+        "type": "query",
+        "datasource": { "type": "prometheus" },
+        "query": "label_values(ibx_network_utilization_percent, zone)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "label": "Zone"
+      },
+      {
+        "name": "vlan",
+        "type": "query",
+        "datasource": { "type": "prometheus" },
+        "query": "label_values(ibx_network_utilization_percent, vlan)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "label": "VLAN"
+      },
+      {
+        "name": "site",
+        "type": "query",
+        "datasource": { "type": "prometheus" },
+        "query": "label_values(ibx_network_utilization_percent, site)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "label": "Site"
+      }
+    ]
+  },
+  "time": { "from": "now-24h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Infoblox Network Utilization",
+  "uid": "ibx-network-utilization",
+  "version": 1
+}
