@@ -281,6 +281,138 @@
           }
         }
       }
+    },
+    {
+      "id": 10,
+      "title": "Total DNS Zones",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 44 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "count(count by (zone) (ibx_dns_records_count))",
+          "legendFormat": "Zones",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "blue" }
+        }
+      }
+    },
+    {
+      "id": 11,
+      "title": "Total DNS Records",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 44 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "sum(ibx_dns_records_count)",
+          "legendFormat": "Records",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "green" },
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "title": "Record Types",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 44 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "count(count by (type) (ibx_dns_records_count))",
+          "legendFormat": "Types",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "purple" }
+        }
+      }
+    },
+    {
+      "id": 13,
+      "title": "Top Zones by Record Count",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 48 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "topk(10, sum by (zone) (ibx_dns_records_count))",
+          "legendFormat": "{{zone}}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "palette-classic" }
+        }
+      }
+    },
+    {
+      "id": 14,
+      "title": "DNS Records by Type",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 48 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "sum by (type) (ibx_dns_records_count)",
+          "legendFormat": "{{type}}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "palette-classic" }
+        }
+      }
+    },
+    {
+      "id": 15,
+      "title": "DNS Records by Zone and Type",
+      "type": "table",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 56 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "ibx_dns_records_count",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "align": "auto" }
+        }
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "__name__": true, "job": true, "instance": true },
+            "renameByName": {
+              "zone": "Zone",
+              "type": "Record Type",
+              "Value": "Count",
+              "view": "View"
+            }
+          }
+        }
+      ]
     }
   ],
   "schemaVersion": 39,
