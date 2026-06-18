@@ -125,7 +125,6 @@
               { "color": "red", "value": 85 }
             ]
           },
-          "unit": "percent",
           "custom": {
             "cellOptions": { "type": "color-background" },
             "align": "auto"
@@ -136,7 +135,8 @@
             "matcher": { "id": "byName", "options": "Value" },
             "properties": [
               { "id": "custom.width", "value": 100 },
-              { "id": "displayName", "value": "Usage %" }
+              { "id": "displayName", "value": "Usage %" },
+              { "id": "unit", "value": "percent" }
             ]
           }
         ]
