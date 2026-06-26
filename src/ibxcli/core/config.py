@@ -123,11 +123,7 @@ def load_config(
             "No Infoblox username configured. "
             "Set --username flag, IBX_USERNAME env var, or config file"
         )
-    if not merged["password"]:
-        raise IbxConfigError(
-            "No Infoblox password configured. "
-            "Set --password flag, IBX_PASSWORD env var, or config file"
-        )
+    # Password can be empty — it will be prompted interactively later
 
     return ConnectionConfig(
         host=merged["host"],
