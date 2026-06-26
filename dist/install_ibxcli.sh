@@ -948,6 +948,7 @@ cat > "$SRC_DIR/cli/main.py" << 'PYEOF'
 
 from __future__ import annotations
 
+import getpass
 import sys
 from pathlib import Path
 
@@ -1031,7 +1032,13 @@ def _resolve_config(ctx: click.Context):
     profile = ctx.params.get("profile")
     cfg_file = Path(config_path) if config_path else DEFAULT_CONFIG_PATH
 
-    return load_config(config_path=cfg_file, profile=profile, cli_overrides=cli_overrides)
+    cfg = load_config(config_path=cfg_file, profile=profile, cli_overrides=cli_overrides)
+
+    # If password is still empty, prompt interactively (hidden input)
+    if not cfg.password and not ctx.params.get("password"):
+        cfg.password = getpass.getpass("Password: ")
+
+    return cfg
 
 
 def _ensure_client(ctx):
@@ -1053,7 +1060,7 @@ def _ensure_client(ctx):
 @click.option("--profile", help="Use named profile from config file")
 @click.option("--host", help="Infoblox Grid Master hostname or IP")
 @click.option("--username", help="API username")
-@click.option("--password", help="API password (or set IBX_PASSWORD env)")
+@click.option("--password", help="API password (or set IBX_PASSWORD env, or enter interactively)")
 @click.option("--wapi-version", default=None, help="WAPI version (default: 2.13)")
 @click.option("--no-verify-ssl", is_flag=True, help="Disable SSL certificate verification")
 @click.option("--timeout", type=int, default=None, help="Request timeout in seconds (default: 30)")
@@ -1389,11 +1396,7 @@ def load_config(
             "No Infoblox username configured. "
             "Set --username flag, IBX_USERNAME env var, or config file"
         )
-    if not merged["password"]:
-        raise IbxConfigError(
-            "No Infoblox password configured. "
-            "Set --password flag, IBX_PASSWORD env var, or config file"
-        )
+    # Password can be empty — it will be prompted interactively later
 
     return ConnectionConfig(
         host=merged["host"],
