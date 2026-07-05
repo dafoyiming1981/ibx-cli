@@ -32,7 +32,7 @@ else
     python3.12 -m ensurepip
 fi
 
-python3.12 -m pip install click rich pyyaml infoblox-client --quiet --trusted-host your-internal-pip-mirror
+python3.12 -m pip install click rich pyyaml infoblox-client requests --quiet --trusted-host your-internal-pip-mirror
 
 # --- Step 2: Deploy source files ---
 echo "[2/3] Deploying source files..."
