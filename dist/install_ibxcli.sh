@@ -1068,8 +1068,9 @@ def _print_debug_config(cfg):
     console.print(f"  vault_cert_path:  {cfg.vault_cert_path or '(not set)'}")
     console.print(f"  vault_key_path:   {cfg.vault_key_path or '(not set)'}")
     console.print(f"  vault_secret_path: {cfg.vault_secret_path or '(not set)'}")
-    console.print(f"  vault_role_name:  {cfg.vault_role_name or '(not set)'}")
-    console.print(f"  vault_mount_path: {cfg.vault_mount_path or '(not set)'}")
+    console.print(f"  vault_role_name:   {cfg.vault_role_name or '(not set)'}")
+    console.print(f"  vault_mount_path:  {cfg.vault_mount_path or '(not set)'}")
+    console.print(f"  vault_namespace:   {cfg.vault_namespace or '(not set)'}")
 
     # Highlight missing vault vars
     if not vault_mode:
@@ -1356,6 +1357,7 @@ DEFAULTS = {
     "vault_secret_path": "",
     "vault_role_name": "",
     "vault_mount_path": "secret",
+    "vault_namespace": "",
 }
 
 ENV_MAP = {
@@ -1372,6 +1374,7 @@ ENV_MAP = {
     "IBX_VAULT_SECRET_PATH": "vault_secret_path",
     "IBX_VAULT_ROLE_NAME": "vault_role_name",
     "IBX_VAULT_MOUNT_PATH": "vault_mount_path",
+    "IBX_VAULT_NAMESPACE": "vault_namespace",
 }
 
 
@@ -1393,6 +1396,7 @@ class ConnectionConfig:
     vault_secret_path: str = ""
     vault_role_name: str = ""
     vault_mount_path: str = "secret"
+    vault_namespace: str = ""
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -1487,6 +1491,7 @@ def load_config(
             secret_path=merged["vault_secret_path"],
             role_name=merged.get("vault_role_name") or None,
             mount_path=merged.get("vault_mount_path", "secret"),
+            namespace=merged.get("vault_namespace") or None,
         )
     else:
         if not merged["host"]:
@@ -1515,6 +1520,7 @@ def load_config(
         vault_secret_path=merged["vault_secret_path"],
         vault_role_name=merged.get("vault_role_name", ""),
         vault_mount_path=merged.get("vault_mount_path", "secret"),
+        vault_namespace=merged.get("vault_namespace", ""),
     )
 
 PYEOF
@@ -1861,6 +1867,7 @@ def resolve_vault_password(
     secret_path: str,
     role_name: str | None = None,
     mount_path: str = "secret",
+    namespace: str | None = None,
 ) -> str:
     """Authenticate to Vault via TLS cert and retrieve the Infoblox password.
 
@@ -1871,6 +1878,7 @@ def resolve_vault_password(
         secret_path: KV v2 secret path (e.g. infoblox/prod).
         role_name: Optional cert auth role name. Defaults to certificate CN.
         mount_path: Vault secret engine mount path (default: "secret").
+        namespace: Optional Vault enterprise namespace.
 
     Returns:
         The password string retrieved from Vault.
@@ -1884,14 +1892,19 @@ def resolve_vault_password(
     session = requests.Session()
     session.cert = (str(cert_file), str(key_file))
 
-    # Step 1: Authenticate via cert login
+    # Shared headers
+    headers = {}
+    if namespace:
+        headers["X-Vault-Namespace"] = namespace
+
+    # Step 1: Authenticate via cert login (JSON body, matching curl --data)
     login_url = f"{addr.rstrip('/')}/v1/auth/cert/login"
-    params = {}
+    login_body = {}
     if role_name:
-        params["role"] = role_name
+        login_body["name"] = role_name
 
     try:
-        resp = session.post(login_url, params=params, timeout=30)
+        resp = session.post(login_url, json=login_body, headers=headers, timeout=30)
     except requests.RequestException as e:
         raise IbxConfigError(f"Vault connection failed: {e}") from e
 
@@ -1911,13 +1924,10 @@ def resolve_vault_password(
 
     # Step 2: Read secret from KV v2
     secret_url = f"{addr.rstrip('/')}/v1/{mount_path}/data/{secret_path.lstrip('/')}"
+    headers["X-Vault-Token"] = token
 
     try:
-        resp = session.get(
-            secret_url,
-            headers={"X-Vault-Token": token},
-            timeout=30,
-        )
+        resp = session.get(secret_url, headers=headers, timeout=30)
     except requests.RequestException as e:
         raise IbxConfigError(f"Vault secret read failed: {e}") from e
 
