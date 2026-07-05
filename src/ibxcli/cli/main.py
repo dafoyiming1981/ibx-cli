@@ -88,8 +88,9 @@ def _resolve_config(ctx: click.Context):
 
     cfg = load_config(config_path=cfg_file, profile=profile, cli_overrides=cli_overrides)
 
-    # If password is still empty, prompt interactively (hidden input)
-    if not cfg.password and not ctx.params.get("password"):
+    # If password is still empty and not using Vault, prompt interactively
+    vault_mode = bool(cfg.vault_addr and cfg.vault_cert_path and cfg.vault_key_path and cfg.vault_secret_path)
+    if not cfg.password and not ctx.params.get("password") and not vault_mode:
         cfg.password = getpass.getpass("Password: ")
 
     return cfg

@@ -21,6 +21,12 @@ DEFAULTS = {
     "ssl_verify": True,
     "timeout": 30,
     "max_results": 1000,
+    # Vault integration
+    "vault_addr": "",
+    "vault_cert_path": "",
+    "vault_key_path": "",
+    "vault_secret_path": "",
+    "vault_role_name": "",
 }
 
 ENV_MAP = {
@@ -31,6 +37,11 @@ ENV_MAP = {
     "IBX_SSL_VERIFY": "ssl_verify",
     "IBX_TIMEOUT": "timeout",
     "IBX_MAX_RESULTS": "max_results",
+    "IBX_VAULT_ADDR": "vault_addr",
+    "IBX_VAULT_CERT_PATH": "vault_cert_path",
+    "IBX_VAULT_KEY_PATH": "vault_key_path",
+    "IBX_VAULT_SECRET_PATH": "vault_secret_path",
+    "IBX_VAULT_ROLE_NAME": "vault_role_name",
 }
 
 
@@ -45,6 +56,12 @@ class ConnectionConfig:
     ssl_verify: bool = True
     timeout: int = 30
     max_results: int = 1000
+    # Vault integration (empty string = not using Vault)
+    vault_addr: str = ""
+    vault_cert_path: str = ""
+    vault_key_path: str = ""
+    vault_secret_path: str = ""
+    vault_role_name: str = ""
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -78,6 +95,16 @@ def _coerce_types(d: dict) -> dict:
     return out
 
 
+def _is_vault_mode(merged: dict) -> bool:
+    """Check if all required Vault env vars are set."""
+    return bool(
+        merged.get("vault_addr")
+        and merged.get("vault_cert_path")
+        and merged.get("vault_key_path")
+        and merged.get("vault_secret_path")
+    )
+
+
 def load_config(
     config_path: Path | None = None,
     profile: str | None = None,
@@ -91,6 +118,10 @@ def load_config(
     3. Config file profile (if specified)
     4. Environment variables
     5. CLI overrides
+
+    When all four Vault env vars are set (IBX_VAULT_ADDR,
+    IBX_VAULT_CERT_PATH, IBX_VAULT_KEY_PATH, IBX_VAULT_SECRET_PATH),
+    the password is retrieved from HashiCorp Vault via TLS cert auth.
     """
     cfg_path = config_path or DEFAULT_CONFIG_PATH
     raw = _load_yaml(cfg_path)
@@ -113,17 +144,30 @@ def load_config(
 
     merged = _coerce_types(merged)
 
-    if not merged["host"]:
-        raise IbxConfigError(
-            "No Infoblox host configured. "
-            "Set --host flag, IBX_HOST env var, or create ~/.infoblox/config"
+    vault_mode = _is_vault_mode(merged)
+
+    if vault_mode:
+        from ibxcli.core.vault import resolve_vault_password
+
+        merged["password"] = resolve_vault_password(
+            addr=merged["vault_addr"],
+            cert_path=merged["vault_cert_path"],
+            key_path=merged["vault_key_path"],
+            secret_path=merged["vault_secret_path"],
+            role_name=merged.get("vault_role_name") or None,
         )
-    if not merged["username"]:
-        raise IbxConfigError(
-            "No Infoblox username configured. "
-            "Set --username flag, IBX_USERNAME env var, or config file"
-        )
-    # Password can be empty — it will be prompted interactively later
+    else:
+        if not merged["host"]:
+            raise IbxConfigError(
+                "No Infoblox host configured. "
+                "Set --host flag, IBX_HOST env var, or create ~/.infoblox/config"
+            )
+        if not merged["username"]:
+            raise IbxConfigError(
+                "No Infoblox username configured. "
+                "Set --username flag, IBX_USERNAME env var, or config file"
+            )
+        # Password can be empty — it will be prompted interactively later
 
     return ConnectionConfig(
         host=merged["host"],
@@ -133,4 +177,9 @@ def load_config(
         ssl_verify=bool(merged["ssl_verify"]),
         timeout=int(merged["timeout"]),
         max_results=int(merged["max_results"]),
+        vault_addr=merged["vault_addr"],
+        vault_cert_path=merged["vault_cert_path"],
+        vault_key_path=merged["vault_key_path"],
+        vault_secret_path=merged["vault_secret_path"],
+        vault_role_name=merged.get("vault_role_name", ""),
     )

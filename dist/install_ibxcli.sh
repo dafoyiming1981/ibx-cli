@@ -1034,8 +1034,9 @@ def _resolve_config(ctx: click.Context):
 
     cfg = load_config(config_path=cfg_file, profile=profile, cli_overrides=cli_overrides)
 
-    # If password is still empty, prompt interactively (hidden input)
-    if not cfg.password and not ctx.params.get("password"):
+    # If password is still empty and not using Vault, prompt interactively
+    vault_mode = bool(cfg.vault_addr and cfg.vault_cert_path and cfg.vault_key_path and cfg.vault_secret_path)
+    if not cfg.password and not ctx.params.get("password") and not vault_mode:
         cfg.password = getpass.getpass("Password: ")
 
     return cfg
@@ -1294,6 +1295,12 @@ DEFAULTS = {
     "ssl_verify": True,
     "timeout": 30,
     "max_results": 1000,
+    # Vault integration
+    "vault_addr": "",
+    "vault_cert_path": "",
+    "vault_key_path": "",
+    "vault_secret_path": "",
+    "vault_role_name": "",
 }
 
 ENV_MAP = {
@@ -1304,6 +1311,11 @@ ENV_MAP = {
     "IBX_SSL_VERIFY": "ssl_verify",
     "IBX_TIMEOUT": "timeout",
     "IBX_MAX_RESULTS": "max_results",
+    "IBX_VAULT_ADDR": "vault_addr",
+    "IBX_VAULT_CERT_PATH": "vault_cert_path",
+    "IBX_VAULT_KEY_PATH": "vault_key_path",
+    "IBX_VAULT_SECRET_PATH": "vault_secret_path",
+    "IBX_VAULT_ROLE_NAME": "vault_role_name",
 }
 
 
@@ -1318,6 +1330,12 @@ class ConnectionConfig:
     ssl_verify: bool = True
     timeout: int = 30
     max_results: int = 1000
+    # Vault integration (empty string = not using Vault)
+    vault_addr: str = ""
+    vault_cert_path: str = ""
+    vault_key_path: str = ""
+    vault_secret_path: str = ""
+    vault_role_name: str = ""
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -1351,6 +1369,16 @@ def _coerce_types(d: dict) -> dict:
     return out
 
 
+def _is_vault_mode(merged: dict) -> bool:
+    """Check if all required Vault env vars are set."""
+    return bool(
+        merged.get("vault_addr")
+        and merged.get("vault_cert_path")
+        and merged.get("vault_key_path")
+        and merged.get("vault_secret_path")
+    )
+
+
 def load_config(
     config_path: Path | None = None,
     profile: str | None = None,
@@ -1364,6 +1392,10 @@ def load_config(
     3. Config file profile (if specified)
     4. Environment variables
     5. CLI overrides
+
+    When all four Vault env vars are set (IBX_VAULT_ADDR,
+    IBX_VAULT_CERT_PATH, IBX_VAULT_KEY_PATH, IBX_VAULT_SECRET_PATH),
+    the password is retrieved from HashiCorp Vault via TLS cert auth.
     """
     cfg_path = config_path or DEFAULT_CONFIG_PATH
     raw = _load_yaml(cfg_path)
@@ -1386,17 +1418,30 @@ def load_config(
 
     merged = _coerce_types(merged)
 
-    if not merged["host"]:
-        raise IbxConfigError(
-            "No Infoblox host configured. "
-            "Set --host flag, IBX_HOST env var, or create ~/.infoblox/config"
+    vault_mode = _is_vault_mode(merged)
+
+    if vault_mode:
+        from ibxcli.core.vault import resolve_vault_password
+
+        merged["password"] = resolve_vault_password(
+            addr=merged["vault_addr"],
+            cert_path=merged["vault_cert_path"],
+            key_path=merged["vault_key_path"],
+            secret_path=merged["vault_secret_path"],
+            role_name=merged.get("vault_role_name") or None,
         )
-    if not merged["username"]:
-        raise IbxConfigError(
-            "No Infoblox username configured. "
-            "Set --username flag, IBX_USERNAME env var, or config file"
-        )
-    # Password can be empty — it will be prompted interactively later
+    else:
+        if not merged["host"]:
+            raise IbxConfigError(
+                "No Infoblox host configured. "
+                "Set --host flag, IBX_HOST env var, or create ~/.infoblox/config"
+            )
+        if not merged["username"]:
+            raise IbxConfigError(
+                "No Infoblox username configured. "
+                "Set --username flag, IBX_USERNAME env var, or config file"
+            )
+        # Password can be empty — it will be prompted interactively later
 
     return ConnectionConfig(
         host=merged["host"],
@@ -1406,6 +1451,11 @@ def load_config(
         ssl_verify=bool(merged["ssl_verify"]),
         timeout=int(merged["timeout"]),
         max_results=int(merged["max_results"]),
+        vault_addr=merged["vault_addr"],
+        vault_cert_path=merged["vault_cert_path"],
+        vault_key_path=merged["vault_key_path"],
+        vault_secret_path=merged["vault_secret_path"],
+        vault_role_name=merged.get("vault_role_name", ""),
     )
 
 PYEOF
@@ -1718,6 +1768,124 @@ class QueryExecutor:
             fields=fields,
             total_count=len(records),
         )
+
+PYEOF
+
+# ===== ibxcli/core/vault.py =====
+cat > "$SRC_DIR/core/vault.py" << 'PYEOF'
+"""HashiCorp Vault integration for credential retrieval.
+
+Uses TLS client certificate authentication to retrieve secrets
+from Vault without storing passwords on disk.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import requests
+
+from ibxcli.core.exceptions import IbxConfigError
+
+
+def _validate_file(path: str, label: str) -> Path:
+    p = Path(path).expanduser()
+    if not p.is_file():
+        raise IbxConfigError(f"{label} file not found: {p}")
+    return p
+
+
+def resolve_vault_password(
+    addr: str,
+    cert_path: str,
+    key_path: str,
+    secret_path: str,
+    role_name: str | None = None,
+) -> str:
+    """Authenticate to Vault via TLS cert and retrieve the Infoblox password.
+
+    Args:
+        addr: Vault server address (e.g. https://vault.example.com:8200).
+        cert_path: Path to TLS client certificate file.
+        key_path: Path to TLS client private key file.
+        secret_path: KV v2 secret path (e.g. infoblox/prod).
+        role_name: Optional cert auth role name. Defaults to certificate CN.
+
+    Returns:
+        The password string retrieved from Vault.
+
+    Raises:
+        IbxConfigError: On connection failure, auth failure, or secret not found.
+    """
+    cert_file = _validate_file(cert_path, "TLS cert")
+    key_file = _validate_file(key_path, "TLS key")
+
+    session = requests.Session()
+    session.cert = (str(cert_file), str(key_file))
+
+    # Step 1: Authenticate via cert login
+    login_url = f"{addr.rstrip('/')}/v1/auth/cert/login"
+    params = {}
+    if role_name:
+        params["role"] = role_name
+
+    try:
+        resp = session.post(login_url, params=params, timeout=30)
+    except requests.RequestException as e:
+        raise IbxConfigError(f"Vault connection failed: {e}") from e
+
+    if resp.status_code != 200:
+        raise IbxConfigError(
+            f"Vault cert authentication failed (HTTP {resp.status_code}): {resp.text[:200]}"
+        )
+
+    try:
+        body = resp.json()
+    except ValueError as e:
+        raise IbxConfigError(f"Vault returned invalid JSON: {resp.text[:200]}") from e
+
+    token = body.get("auth", {}).get("client_token")
+    if not token:
+        raise IbxConfigError("Vault did not return a client token")
+
+    # Step 2: Read secret from KV v2
+    secret_url = f"{addr.rstrip('/')}/v1/secret/data/{secret_path.lstrip('/')}"
+
+    try:
+        resp = session.get(
+            secret_url,
+            headers={"X-Vault-Token": token},
+            timeout=30,
+        )
+    except requests.RequestException as e:
+        raise IbxConfigError(f"Vault secret read failed: {e}") from e
+
+    if resp.status_code == 403:
+        raise IbxConfigError(
+            f"Vault permission denied for secret path: {secret_path}"
+        )
+    if resp.status_code == 404:
+        raise IbxConfigError(
+            f"Vault secret not found at path: {secret_path}"
+        )
+    if resp.status_code != 200:
+        raise IbxConfigError(
+            f"Vault secret read failed (HTTP {resp.status_code}): {resp.text[:200]}"
+        )
+
+    try:
+        body = resp.json()
+    except ValueError as e:
+        raise IbxConfigError(f"Vault returned invalid JSON: {resp.text[:200]}") from e
+
+    # KV v2 structure: {"data": {"data": {"password": "...", ...}}}
+    password = body.get("data", {}).get("data", {}).get("password")
+    if not password:
+        raise IbxConfigError(
+            f"No 'password' field found in Vault secret at {secret_path}"
+        )
+
+    return password
 
 PYEOF
 
