@@ -123,11 +123,22 @@ def resolve_vault_password(
     except ValueError as e:
         raise IbxConfigError(f"Vault returned invalid JSON: {resp.text[:200]}") from e
 
-    # KV v2 structure: {"data": {"data": {"password": "...", ...}}}
-    password = body.get("data", {}).get("data", {}).get("password")
-    if not password:
+    # KV v2 structure: {"data": {"data": {"key": "value", ...}}}
+    secret_data = body.get("data", {}).get("data", {})
+    if not secret_data:
         raise IbxConfigError(
-            f"No 'password' field found in Vault secret at {secret_path}"
+            f"No data found in Vault secret at {secret_path}"
+        )
+
+    # Key name is the last segment of the secret path
+    # e.g. "id/env/cn" -> key name "cn"
+    key_name = secret_path.rstrip("/").split("/")[-1]
+    password = secret_data.get(key_name)
+    if not password:
+        available = ", ".join(secret_data.keys())
+        raise IbxConfigError(
+            f"No '{key_name}' field found in Vault secret at {secret_path}. "
+            f"Available keys: {available}"
         )
 
     return password
