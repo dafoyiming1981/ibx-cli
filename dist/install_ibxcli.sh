@@ -1915,6 +1915,12 @@ def resolve_vault_password(
 
     try:
         resp = session.post(login_url, json=login_body, headers=headers, timeout=30)
+    except requests.exceptions.SSLError as e:
+        raise IbxConfigError(
+            f"Vault SSL error: {e}. "
+            f"If using a self-signed cert, set IBX_VAULT_SSL_VERIFY=false. "
+            f"(ssl_verify={ssl_verify})"
+        ) from e
     except requests.RequestException as e:
         raise IbxConfigError(f"Vault connection failed: {e}") from e
 
@@ -1938,6 +1944,12 @@ def resolve_vault_password(
 
     try:
         resp = session.get(secret_url, headers=headers, timeout=30)
+    except requests.exceptions.SSLError as e:
+        raise IbxConfigError(
+            f"Vault SSL error reading secret: {e}. "
+            f"If using a self-signed cert, set IBX_VAULT_SSL_VERIFY=false. "
+            f"(ssl_verify={ssl_verify})"
+        ) from e
     except requests.RequestException as e:
         raise IbxConfigError(f"Vault secret read failed: {e}") from e
 
