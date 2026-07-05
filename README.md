@@ -154,7 +154,7 @@ ibx dns zones
 # Vault 认证（4 个，必填）
 export IBX_VAULT_ADDR="https://vault.example.com:8200"
 export IBX_VAULT_CERT_PATH="$HOME/$USER.pem"
-export IBX_VAULT_KEY_PATH="$HOME/$USER-key.pem"
+export IBX_VAULT_KEY_PATH="$HOME/$USER.key"
 export IBX_VAULT_SECRET_PATH="infoblox/prod"
 # export IBX_VAULT_ROLE_NAME="ibx-cli"  # 可选，默认使用证书 CN
 
