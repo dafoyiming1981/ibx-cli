@@ -1914,7 +1914,7 @@ def resolve_vault_password(
         login_body["name"] = role_name
 
     try:
-        resp = session.post(login_url, json=login_body, headers=headers, timeout=30)
+        resp = session.post(login_url, json=login_body, headers=headers, timeout=30, verify=ssl_verify)
     except requests.exceptions.SSLError as e:
         raise IbxConfigError(
             f"Vault SSL error: {e}. "
@@ -1943,7 +1943,7 @@ def resolve_vault_password(
     headers["X-Vault-Token"] = token
 
     try:
-        resp = session.get(secret_url, headers=headers, timeout=30)
+        resp = session.get(secret_url, headers=headers, timeout=30, verify=ssl_verify)
     except requests.exceptions.SSLError as e:
         raise IbxConfigError(
             f"Vault SSL error reading secret: {e}. "
