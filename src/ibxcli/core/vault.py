@@ -28,6 +28,7 @@ def resolve_vault_password(
     role_name: str | None = None,
     mount_path: str = "secret",
     namespace: str | None = None,
+    ssl_verify: bool = True,
 ) -> str:
     """Authenticate to Vault via TLS cert and retrieve the Infoblox password.
 
@@ -51,6 +52,7 @@ def resolve_vault_password(
 
     session = requests.Session()
     session.cert = (str(cert_file), str(key_file))
+    session.verify = ssl_verify
 
     # Shared headers
     headers = {}

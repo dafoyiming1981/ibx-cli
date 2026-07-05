@@ -161,6 +161,7 @@ export IBX_VAULT_SECRET_PATH="infoblox/prod"
 # export IBX_VAULT_ROLE_NAME="ibx-cli"        # 可选，默认使用证书 CN
 # export IBX_VAULT_MOUNT_PATH="secret"        # 可选，secret engine 挂载路径，默认 "secret"
 # export IBX_VAULT_NAMESPACE="abc/core"       # 可选，Vault 企业命名空间
+# export IBX_VAULT_SSL_VERIFY=false           # 可选，Vault 使用自签名证书时关闭 SSL 验证
 
 # Infoblox 连接（2 个，必填）
 export IBX_HOST=10.x.x.x

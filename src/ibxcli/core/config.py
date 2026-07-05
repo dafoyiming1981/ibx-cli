@@ -29,6 +29,7 @@ DEFAULTS = {
     "vault_role_name": "",
     "vault_mount_path": "secret",
     "vault_namespace": "",
+    "vault_ssl_verify": True,
 }
 
 ENV_MAP = {
@@ -46,6 +47,7 @@ ENV_MAP = {
     "IBX_VAULT_ROLE_NAME": "vault_role_name",
     "IBX_VAULT_MOUNT_PATH": "vault_mount_path",
     "IBX_VAULT_NAMESPACE": "vault_namespace",
+    "IBX_VAULT_SSL_VERIFY": "vault_ssl_verify",
 }
 
 
@@ -68,6 +70,7 @@ class ConnectionConfig:
     vault_role_name: str = ""
     vault_mount_path: str = "secret"
     vault_namespace: str = ""
+    vault_ssl_verify: bool = True
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -163,6 +166,7 @@ def load_config(
             role_name=merged.get("vault_role_name") or None,
             mount_path=merged.get("vault_mount_path", "secret"),
             namespace=merged.get("vault_namespace") or None,
+            ssl_verify=merged.get("vault_ssl_verify", True),
         )
     else:
         if not merged["host"]:
@@ -192,4 +196,5 @@ def load_config(
         vault_role_name=merged.get("vault_role_name", ""),
         vault_mount_path=merged.get("vault_mount_path", "secret"),
         vault_namespace=merged.get("vault_namespace", ""),
+        vault_ssl_verify=bool(merged.get("vault_ssl_verify", True)),
     )

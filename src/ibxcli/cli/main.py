@@ -125,6 +125,7 @@ def _print_debug_config(cfg):
     console.print(f"  vault_role_name:   {cfg.vault_role_name or '(not set)'}")
     console.print(f"  vault_mount_path:  {cfg.vault_mount_path or '(not set)'}")
     console.print(f"  vault_namespace:   {cfg.vault_namespace or '(not set)'}")
+    console.print(f"  vault_ssl_verify:  {cfg.vault_ssl_verify}")
 
     # Highlight missing vault vars
     if not vault_mode:
