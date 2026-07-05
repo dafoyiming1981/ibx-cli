@@ -1042,6 +1042,54 @@ def _resolve_config(ctx: click.Context):
     return cfg
 
 
+def _print_debug_config(cfg):
+    """Print resolved config for debugging (password masked)."""
+    vault_mode = bool(cfg.vault_addr and cfg.vault_cert_path and cfg.vault_key_path and cfg.vault_secret_path)
+
+    console.print("\n=== ibx-cli Debug Info ===\n")
+
+    console.print("[bold]Authentication Mode:[/bold]")
+    if vault_mode:
+        console.print("  [green]Vault TLS cert auth[/green]")
+    elif cfg.password:
+        console.print("  [green]Password configured[/green]")
+    else:
+        console.print("  [red]No password configured[/red]")
+
+    console.print("\n[bold]Infoblox Connection:[/bold]")
+    console.print(f"  host:         {cfg.host or '(not set)'}")
+    console.print(f"  username:     {cfg.username or '(not set)'}")
+    console.print(f"  password:     {'*' * len(cfg.password) if cfg.password else '(empty)'}")
+    console.print(f"  wapi_version: {cfg.wapi_version}")
+    console.print(f"  ssl_verify:   {cfg.ssl_verify}")
+
+    console.print("\n[bold]Vault Configuration:[/bold]")
+    console.print(f"  vault_addr:       {cfg.vault_addr or '(not set)'}")
+    console.print(f"  vault_cert_path:  {cfg.vault_cert_path or '(not set)'}")
+    console.print(f"  vault_key_path:   {cfg.vault_key_path or '(not set)'}")
+    console.print(f"  vault_secret_path: {cfg.vault_secret_path or '(not set)'}")
+    console.print(f"  vault_role_name:  {cfg.vault_role_name or '(not set)'}")
+    console.print(f"  vault_mount_path: {cfg.vault_mount_path or '(not set)'}")
+
+    # Highlight missing vault vars
+    if not vault_mode:
+        missing = []
+        if not cfg.vault_addr:
+            missing.append("IBX_VAULT_ADDR")
+        if not cfg.vault_cert_path:
+            missing.append("IBX_VAULT_CERT_PATH")
+        if not cfg.vault_key_path:
+            missing.append("IBX_VAULT_KEY_PATH")
+        if not cfg.vault_secret_path:
+            missing.append("IBX_VAULT_SECRET_PATH")
+        if missing:
+            console.print(f"\n  [yellow]Vault mode NOT active. Missing: {', '.join(missing)}[/yellow]")
+        if cfg.host and cfg.username:
+            console.print(f"\n  Falling back to [bold]username/password[/bold] auth.")
+
+    console.print("")
+
+
 def _ensure_client(ctx):
     """Lazy config resolution — only when a leaf command needs the client."""
     if "client" not in ctx.obj:
@@ -1066,15 +1114,21 @@ def _ensure_client(ctx):
 @click.option("--no-verify-ssl", is_flag=True, help="Disable SSL certificate verification")
 @click.option("--timeout", type=int, default=None, help="Request timeout in seconds (default: 30)")
 @click.option("--max-results", type=int, default=None, help="Max results per query (default: 1000)")
+@click.option("--debug", is_flag=True, help="Print resolved config (password masked) and exit")
 @click.version_option(__version__, prog_name="ibx")
 @click.pass_context
-def cli(ctx, config, profile, host, username, password, wapi_version, no_verify_ssl, timeout, max_results):
+def cli(ctx, config, profile, host, username, password, wapi_version, no_verify_ssl, timeout, max_results, debug):
     """ibx - Infoblox NIOS CLI tool for DNS/DHCP management.
 
     Query and inspect DNS records, DHCP networks, leases, and more
     via the Infoblox WAPI.
     """
     ctx.ensure_object(dict)
+
+    if debug:
+        cfg = _resolve_config(ctx)
+        _print_debug_config(cfg)
+        sys.exit(0)
 
 
 # Register subcommand groups (import after cli is defined to avoid circular imports)
@@ -1301,6 +1355,7 @@ DEFAULTS = {
     "vault_key_path": "",
     "vault_secret_path": "",
     "vault_role_name": "",
+    "vault_mount_path": "secret",
 }
 
 ENV_MAP = {
@@ -1316,6 +1371,7 @@ ENV_MAP = {
     "IBX_VAULT_KEY_PATH": "vault_key_path",
     "IBX_VAULT_SECRET_PATH": "vault_secret_path",
     "IBX_VAULT_ROLE_NAME": "vault_role_name",
+    "IBX_VAULT_MOUNT_PATH": "vault_mount_path",
 }
 
 
@@ -1336,6 +1392,7 @@ class ConnectionConfig:
     vault_key_path: str = ""
     vault_secret_path: str = ""
     vault_role_name: str = ""
+    vault_mount_path: str = "secret"
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -1429,6 +1486,7 @@ def load_config(
             key_path=merged["vault_key_path"],
             secret_path=merged["vault_secret_path"],
             role_name=merged.get("vault_role_name") or None,
+            mount_path=merged.get("vault_mount_path", "secret"),
         )
     else:
         if not merged["host"]:
@@ -1456,6 +1514,7 @@ def load_config(
         vault_key_path=merged["vault_key_path"],
         vault_secret_path=merged["vault_secret_path"],
         vault_role_name=merged.get("vault_role_name", ""),
+        vault_mount_path=merged.get("vault_mount_path", "secret"),
     )
 
 PYEOF
@@ -1801,6 +1860,7 @@ def resolve_vault_password(
     key_path: str,
     secret_path: str,
     role_name: str | None = None,
+    mount_path: str = "secret",
 ) -> str:
     """Authenticate to Vault via TLS cert and retrieve the Infoblox password.
 
@@ -1810,6 +1870,7 @@ def resolve_vault_password(
         key_path: Path to TLS client private key file.
         secret_path: KV v2 secret path (e.g. infoblox/prod).
         role_name: Optional cert auth role name. Defaults to certificate CN.
+        mount_path: Vault secret engine mount path (default: "secret").
 
     Returns:
         The password string retrieved from Vault.
@@ -1849,7 +1910,7 @@ def resolve_vault_password(
         raise IbxConfigError("Vault did not return a client token")
 
     # Step 2: Read secret from KV v2
-    secret_url = f"{addr.rstrip('/')}/v1/secret/data/{secret_path.lstrip('/')}"
+    secret_url = f"{addr.rstrip('/')}/v1/{mount_path}/data/{secret_path.lstrip('/')}"
 
     try:
         resp = session.get(
