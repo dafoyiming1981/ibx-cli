@@ -27,6 +27,7 @@ def resolve_vault_password(
     secret_path: str,
     role_name: str | None = None,
     mount_path: str = "secret",
+    namespace: str | None = None,
 ) -> str:
     """Authenticate to Vault via TLS cert and retrieve the Infoblox password.
 
@@ -37,6 +38,7 @@ def resolve_vault_password(
         secret_path: KV v2 secret path (e.g. infoblox/prod).
         role_name: Optional cert auth role name. Defaults to certificate CN.
         mount_path: Vault secret engine mount path (default: "secret").
+        namespace: Optional Vault enterprise namespace.
 
     Returns:
         The password string retrieved from Vault.
@@ -50,14 +52,19 @@ def resolve_vault_password(
     session = requests.Session()
     session.cert = (str(cert_file), str(key_file))
 
-    # Step 1: Authenticate via cert login
+    # Shared headers
+    headers = {}
+    if namespace:
+        headers["X-Vault-Namespace"] = namespace
+
+    # Step 1: Authenticate via cert login (JSON body, matching curl --data)
     login_url = f"{addr.rstrip('/')}/v1/auth/cert/login"
-    params = {}
+    login_body = {}
     if role_name:
-        params["role"] = role_name
+        login_body["name"] = role_name
 
     try:
-        resp = session.post(login_url, params=params, timeout=30)
+        resp = session.post(login_url, json=login_body, headers=headers, timeout=30)
     except requests.RequestException as e:
         raise IbxConfigError(f"Vault connection failed: {e}") from e
 
@@ -77,13 +84,10 @@ def resolve_vault_password(
 
     # Step 2: Read secret from KV v2
     secret_url = f"{addr.rstrip('/')}/v1/{mount_path}/data/{secret_path.lstrip('/')}"
+    headers["X-Vault-Token"] = token
 
     try:
-        resp = session.get(
-            secret_url,
-            headers={"X-Vault-Token": token},
-            timeout=30,
-        )
+        resp = session.get(secret_url, headers=headers, timeout=30)
     except requests.RequestException as e:
         raise IbxConfigError(f"Vault secret read failed: {e}") from e
 

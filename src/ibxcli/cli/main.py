@@ -122,8 +122,9 @@ def _print_debug_config(cfg):
     console.print(f"  vault_cert_path:  {cfg.vault_cert_path or '(not set)'}")
     console.print(f"  vault_key_path:   {cfg.vault_key_path or '(not set)'}")
     console.print(f"  vault_secret_path: {cfg.vault_secret_path or '(not set)'}")
-    console.print(f"  vault_role_name:  {cfg.vault_role_name or '(not set)'}")
-    console.print(f"  vault_mount_path: {cfg.vault_mount_path or '(not set)'}")
+    console.print(f"  vault_role_name:   {cfg.vault_role_name or '(not set)'}")
+    console.print(f"  vault_mount_path:  {cfg.vault_mount_path or '(not set)'}")
+    console.print(f"  vault_namespace:   {cfg.vault_namespace or '(not set)'}")
 
     # Highlight missing vault vars
     if not vault_mode:
