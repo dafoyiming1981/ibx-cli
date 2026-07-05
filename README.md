@@ -138,6 +138,34 @@ export IBX_PASSWORD=your_password
 ibx dns zones
 ```
 
+### HashiCorp Vault 集成 (推荐 — 密码不落地)
+
+通过 TLS 客户端证书从 HashiCorp Vault 获取 Infoblox 密码，避免密码存储在本地文件或环境变量中。
+
+**前置条件：**
+- Vault 中已存储 Infoblox 密码（KV v2 engine），路径如 `infoblox/prod`
+- Vault 已启用 cert auth method，并配置了对应客户端证书的 role
+
+**使用方式：**
+
+```bash
+export IBX_VAULT_ADDR="https://vault.example.com:8200"
+export IBX_VAULT_CERT_PATH="/path/to/client.pem"
+export IBX_VAULT_KEY_PATH="/path/to/client-key.pem"
+export IBX_VAULT_SECRET_PATH="infoblox/prod"
+# export IBX_VAULT_ROLE_NAME="ibx-cli"  # 可选，默认使用证书 CN
+```
+
+设置以上 4 个环境变量后，`ibx` 会自动通过 Vault TLS 证书认证获取密码，**跳过**交互式密码输入。
+
+**Vault 中的 secret 结构（KV v2）：**
+
+```json
+{
+  "password": "your_infoblox_password"
+}
+```
+
 ### CLI 参数 (最高优先级)
 
 ```bash
