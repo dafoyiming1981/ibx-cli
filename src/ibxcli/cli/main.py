@@ -96,6 +96,54 @@ def _resolve_config(ctx: click.Context):
     return cfg
 
 
+def _print_debug_config(cfg):
+    """Print resolved config for debugging (password masked)."""
+    vault_mode = bool(cfg.vault_addr and cfg.vault_cert_path and cfg.vault_key_path and cfg.vault_secret_path)
+
+    console.print("\n=== ibx-cli Debug Info ===\n")
+
+    console.print("[bold]Authentication Mode:[/bold]")
+    if vault_mode:
+        console.print("  [green]Vault TLS cert auth[/green]")
+    elif cfg.password:
+        console.print("  [green]Password configured[/green]")
+    else:
+        console.print("  [red]No password configured[/red]")
+
+    console.print("\n[bold]Infoblox Connection:[/bold]")
+    console.print(f"  host:         {cfg.host or '(not set)'}")
+    console.print(f"  username:     {cfg.username or '(not set)'}")
+    console.print(f"  password:     {'*' * len(cfg.password) if cfg.password else '(empty)'}")
+    console.print(f"  wapi_version: {cfg.wapi_version}")
+    console.print(f"  ssl_verify:   {cfg.ssl_verify}")
+
+    console.print("\n[bold]Vault Configuration:[/bold]")
+    console.print(f"  vault_addr:       {cfg.vault_addr or '(not set)'}")
+    console.print(f"  vault_cert_path:  {cfg.vault_cert_path or '(not set)'}")
+    console.print(f"  vault_key_path:   {cfg.vault_key_path or '(not set)'}")
+    console.print(f"  vault_secret_path: {cfg.vault_secret_path or '(not set)'}")
+    console.print(f"  vault_role_name:  {cfg.vault_role_name or '(not set)'}")
+    console.print(f"  vault_mount_path: {cfg.vault_mount_path or '(not set)'}")
+
+    # Highlight missing vault vars
+    if not vault_mode:
+        missing = []
+        if not cfg.vault_addr:
+            missing.append("IBX_VAULT_ADDR")
+        if not cfg.vault_cert_path:
+            missing.append("IBX_VAULT_CERT_PATH")
+        if not cfg.vault_key_path:
+            missing.append("IBX_VAULT_KEY_PATH")
+        if not cfg.vault_secret_path:
+            missing.append("IBX_VAULT_SECRET_PATH")
+        if missing:
+            console.print(f"\n  [yellow]Vault mode NOT active. Missing: {', '.join(missing)}[/yellow]")
+        if cfg.host and cfg.username:
+            console.print(f"\n  Falling back to [bold]username/password[/bold] auth.")
+
+    console.print("")
+
+
 def _ensure_client(ctx):
     """Lazy config resolution — only when a leaf command needs the client."""
     if "client" not in ctx.obj:
@@ -120,15 +168,21 @@ def _ensure_client(ctx):
 @click.option("--no-verify-ssl", is_flag=True, help="Disable SSL certificate verification")
 @click.option("--timeout", type=int, default=None, help="Request timeout in seconds (default: 30)")
 @click.option("--max-results", type=int, default=None, help="Max results per query (default: 1000)")
+@click.option("--debug", is_flag=True, help="Print resolved config (password masked) and exit")
 @click.version_option(__version__, prog_name="ibx")
 @click.pass_context
-def cli(ctx, config, profile, host, username, password, wapi_version, no_verify_ssl, timeout, max_results):
+def cli(ctx, config, profile, host, username, password, wapi_version, no_verify_ssl, timeout, max_results, debug):
     """ibx - Infoblox NIOS CLI tool for DNS/DHCP management.
 
     Query and inspect DNS records, DHCP networks, leases, and more
     via the Infoblox WAPI.
     """
     ctx.ensure_object(dict)
+
+    if debug:
+        cfg = _resolve_config(ctx)
+        _print_debug_config(cfg)
+        sys.exit(0)
 
 
 # Register subcommand groups (import after cli is defined to avoid circular imports)
