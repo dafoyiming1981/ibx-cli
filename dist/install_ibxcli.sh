@@ -1425,6 +1425,8 @@ def _coerce_types(d: dict) -> dict:
     out = dict(d)
     if isinstance(out.get("ssl_verify"), str):
         out["ssl_verify"] = out["ssl_verify"].lower() in ("true", "1", "yes")
+    if isinstance(out.get("vault_ssl_verify"), str):
+        out["vault_ssl_verify"] = out["vault_ssl_verify"].lower() in ("true", "1", "yes")
     for key in ("timeout", "max_results"):
         if isinstance(out.get(key), str):
             try:
