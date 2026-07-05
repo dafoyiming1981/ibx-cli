@@ -148,15 +148,22 @@ ibx dns zones
 
 **使用方式：**
 
+共需 6 个环境变量——4 个用于 Vault 认证，2 个用于 Infoblox 连接：
+
 ```bash
+# Vault 认证（4 个，必填）
 export IBX_VAULT_ADDR="https://vault.example.com:8200"
 export IBX_VAULT_CERT_PATH="/path/to/client.pem"
 export IBX_VAULT_KEY_PATH="/path/to/client-key.pem"
 export IBX_VAULT_SECRET_PATH="infoblox/prod"
 # export IBX_VAULT_ROLE_NAME="ibx-cli"  # 可选，默认使用证书 CN
+
+# Infoblox 连接（2 个，必填）
+export IBX_HOST=10.x.x.x
+export IBX_USERNAME=admin
 ```
 
-设置以上 4 个环境变量后，`ibx` 会自动通过 Vault TLS 证书认证获取密码，**跳过**交互式密码输入。
+设置以上环境变量后，`ibx` 会自动通过 Vault TLS 证书认证获取密码，**跳过**交互式密码输入。`IBX_PASSWORD` 无需设置。
 
 **Vault 中的 secret 结构（KV v2）：**
 
