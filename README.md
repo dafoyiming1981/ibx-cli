@@ -156,7 +156,10 @@ export IBX_VAULT_ADDR="https://vault.example.com:8200"
 export IBX_VAULT_CERT_PATH="$HOME/$USER.pem"
 export IBX_VAULT_KEY_PATH="$HOME/$USER.key"
 export IBX_VAULT_SECRET_PATH="infoblox/prod"
-# export IBX_VAULT_ROLE_NAME="ibx-cli"  # 可选，默认使用证书 CN
+
+# Vault 可选配置
+# export IBX_VAULT_ROLE_NAME="ibx-cli"        # 可选，默认使用证书 CN
+# export IBX_VAULT_MOUNT_PATH="secret"        # 可选，secret engine 挂载路径，默认 "secret"
 
 # Infoblox 连接（2 个，必填）
 export IBX_HOST=10.x.x.x

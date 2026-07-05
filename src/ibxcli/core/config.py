@@ -27,6 +27,7 @@ DEFAULTS = {
     "vault_key_path": "",
     "vault_secret_path": "",
     "vault_role_name": "",
+    "vault_mount_path": "secret",
 }
 
 ENV_MAP = {
@@ -42,6 +43,7 @@ ENV_MAP = {
     "IBX_VAULT_KEY_PATH": "vault_key_path",
     "IBX_VAULT_SECRET_PATH": "vault_secret_path",
     "IBX_VAULT_ROLE_NAME": "vault_role_name",
+    "IBX_VAULT_MOUNT_PATH": "vault_mount_path",
 }
 
 
@@ -62,6 +64,7 @@ class ConnectionConfig:
     vault_key_path: str = ""
     vault_secret_path: str = ""
     vault_role_name: str = ""
+    vault_mount_path: str = "secret"
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -155,6 +158,7 @@ def load_config(
             key_path=merged["vault_key_path"],
             secret_path=merged["vault_secret_path"],
             role_name=merged.get("vault_role_name") or None,
+            mount_path=merged.get("vault_mount_path", "secret"),
         )
     else:
         if not merged["host"]:
@@ -182,4 +186,5 @@ def load_config(
         vault_key_path=merged["vault_key_path"],
         vault_secret_path=merged["vault_secret_path"],
         vault_role_name=merged.get("vault_role_name", ""),
+        vault_mount_path=merged.get("vault_mount_path", "secret"),
     )

@@ -26,6 +26,7 @@ def resolve_vault_password(
     key_path: str,
     secret_path: str,
     role_name: str | None = None,
+    mount_path: str = "secret",
 ) -> str:
     """Authenticate to Vault via TLS cert and retrieve the Infoblox password.
 
@@ -35,6 +36,7 @@ def resolve_vault_password(
         key_path: Path to TLS client private key file.
         secret_path: KV v2 secret path (e.g. infoblox/prod).
         role_name: Optional cert auth role name. Defaults to certificate CN.
+        mount_path: Vault secret engine mount path (default: "secret").
 
     Returns:
         The password string retrieved from Vault.
@@ -74,7 +76,7 @@ def resolve_vault_password(
         raise IbxConfigError("Vault did not return a client token")
 
     # Step 2: Read secret from KV v2
-    secret_url = f"{addr.rstrip('/')}/v1/secret/data/{secret_path.lstrip('/')}"
+    secret_url = f"{addr.rstrip('/')}/v1/{mount_path}/data/{secret_path.lstrip('/')}"
 
     try:
         resp = session.get(
