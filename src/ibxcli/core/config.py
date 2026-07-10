@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import pwd
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -11,6 +12,14 @@ from typing import Any
 import yaml
 
 from ibxcli.core.exceptions import IbxConfigError
+
+
+def _get_home() -> Path:
+    """Return the current user's home directory, robust to missing $HOME."""
+    home = os.environ.get("HOME")
+    if home:
+        return Path(home)
+    return Path(pwd.getpwuid(os.getuid()).pw_dir)
 
 _BASHRC_ENV_PATTERN = re.compile(
     r"""^\s*export\s+(IBX_\w+)=(?:"([^"]*)"|'([^']*)'|(\S+))\s*$""",
@@ -29,7 +38,7 @@ def _load_env_from_bashrc() -> None:
     if not needed:
         return
 
-    bashrc = Path.home() / ".bashrc"
+    bashrc = _get_home() / ".bashrc"
     if not bashrc.exists():
         return
 
@@ -40,7 +49,7 @@ def _load_env_from_bashrc() -> None:
             value = match.group(2) or match.group(3) or match.group(4) or ""
             os.environ[var_name] = value
 
-DEFAULT_CONFIG_PATH = Path.home() / ".infoblox" / "config"
+DEFAULT_CONFIG_PATH = _get_home() / ".infoblox" / "config"
 
 DEFAULTS = {
     "host": "",
