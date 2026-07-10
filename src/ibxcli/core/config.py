@@ -33,6 +33,10 @@ def _load_env_from_bashrc() -> None:
     This is primarily for non-interactive environments (e.g. cron jobs)
     where .bashrc is not sourced automatically.
     """
+    # Ensure HOME is set so that os.path.expandvars('$HOME') works
+    if "HOME" not in os.environ:
+        os.environ["HOME"] = str(_get_home())
+
     # Only load variables that are not already present
     needed = {k for k in ENV_MAP if k not in os.environ}
     if not needed:
@@ -47,6 +51,8 @@ def _load_env_from_bashrc() -> None:
         var_name = match.group(1)
         if var_name in needed:
             value = match.group(2) or match.group(3) or match.group(4) or ""
+            # Expand shell variables like $HOME and $USER
+            value = os.path.expandvars(value)
             os.environ[var_name] = value
 
 DEFAULT_CONFIG_PATH = _get_home() / ".infoblox" / "config"
