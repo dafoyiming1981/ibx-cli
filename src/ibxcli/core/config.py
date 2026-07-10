@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,34 @@ from typing import Any
 import yaml
 
 from ibxcli.core.exceptions import IbxConfigError
+
+_BASHRC_ENV_PATTERN = re.compile(
+    r"""^\s*export\s+(IBX_\w+)=(?:"([^"]*)"|'([^']*)'|(\S+))\s*$""",
+    re.MULTILINE,
+)
+
+
+def _load_env_from_bashrc() -> None:
+    """Load IBX_* environment variables from ~/.bashrc if not already set.
+
+    This is primarily for non-interactive environments (e.g. cron jobs)
+    where .bashrc is not sourced automatically.
+    """
+    # Only load variables that are not already present
+    needed = {k for k in ENV_MAP if k not in os.environ}
+    if not needed:
+        return
+
+    bashrc = Path.home() / ".bashrc"
+    if not bashrc.exists():
+        return
+
+    content = bashrc.read_text()
+    for match in _BASHRC_ENV_PATTERN.finditer(content):
+        var_name = match.group(1)
+        if var_name in needed:
+            value = match.group(2) or match.group(3) or match.group(4) or ""
+            os.environ[var_name] = value
 
 DEFAULT_CONFIG_PATH = Path.home() / ".infoblox" / "config"
 
@@ -136,6 +165,9 @@ def load_config(
     """
     cfg_path = config_path or DEFAULT_CONFIG_PATH
     raw = _load_yaml(cfg_path)
+
+    # In non-interactive environments (e.g. cron), source IBX_* vars from ~/.bashrc
+    _load_env_from_bashrc()
 
     merged = dict(DEFAULTS)
 

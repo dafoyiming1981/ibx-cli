@@ -162,3 +162,7 @@ ibx_network_used_ips{network="10.0.0.0/24",vlan="100",zone="DC1"} 185
 ```
 0 2 * * * ibx dhcp utilization --vlan 100 --vlan 200 --zone DC1 --format prometheus --output /var/lib/node_exporter/ibx_utilization.prom
 ```
+
+### Cron Environment Note
+
+When running under cron, the CLI automatically loads `IBX_*` environment variables from `~/.bashrc` if they are not already present in the cron environment. This means you do **not** need to add `source ~/.bashrc` to your cron job — just ensure the relevant `export IBX_*=...` lines exist in `~/.bashrc`.
