@@ -10,7 +10,28 @@ def _sanitize_label(value: str) -> str:
     return value.replace("\\", "\\\\").replace('"', '\\"')
 
 
-def _label_set(network: str, vlan: str = "", zone: str = "", site: str = "", members: str = "") -> str:
+def render_dns_prometheus(results: list[dict], shared: bool = False) -> str:
+    """Render DNS record counts as Prometheus text exposition format."""
+    lines = []
+    for rec in results:
+        label_set = f'zone="{rec["zone"]}"'
+        if rec["view"]:
+            label_set += f',view="{rec["view"]}"'
+        label_set += f',type="{rec["type"]}"'
+        if shared:
+            label_set += ',shared="true"'
+        lines.append(f'ibx_dns_records_count{{{label_set}}} {rec["count"]}')
+
+    rendered_lines = [
+        "# HELP ibx_dns_records_count Number of DNS records in the zone",
+        "# TYPE ibx_dns_records_count gauge",
+    ]
+    rendered_lines.extend(lines)
+    rendered_lines.append("")
+    return "\n".join(rendered_lines)
+
+
+def _label_set(network: str, vlan: str = "", zone: str = "", site: str = "", members: str = "", shared: bool = False) -> str:
     """Build Prometheus label set string."""
     net = f'network="{_sanitize_label(network)}"'
     parts = [net]
@@ -22,6 +43,8 @@ def _label_set(network: str, vlan: str = "", zone: str = "", site: str = "", mem
         parts.append(f'site="{_sanitize_label(site)}"')
     if members:
         parts.append(f'members="{_sanitize_label(members)}"')
+    if shared:
+        parts.append('shared="true"')
     return "{" + ",".join(parts) + "}"
 
 
@@ -29,14 +52,14 @@ def _label_set(network: str, vlan: str = "", zone: str = "", site: str = "", mem
 class PrometheusFormatter(BaseFormatter):
     """Render network utilization records as Prometheus text exposition format."""
 
-    def render(self, records: list[dict], fields: list[str] | None) -> str:
+    def render(self, records: list[dict], fields: list[str] | None, shared: bool = False) -> str:
         lines: list[str] = []
         seen_metrics: set[str] = set()
 
         for rec in records:
             # fixedaddress 记录：无 utilization 字段
             if "utilization" not in rec:
-                self._render_fixedaddress(rec, lines, seen_metrics)
+                self._render_fixedaddress(rec, lines, seen_metrics, shared=shared)
                 continue
 
             network = rec.get("network", "")
@@ -46,7 +69,7 @@ class PrometheusFormatter(BaseFormatter):
             site = rec.get("Site", "")
             members = rec.get("members", "")
 
-            lbl = _label_set(network, vlan, zone, site, members)
+            lbl = _label_set(network, vlan, zone, site, members, shared=shared)
             utilization_pct = round(utilization / 10, 1)
 
             if "ibx_network_utilization_percent" not in seen_metrics:
@@ -78,7 +101,7 @@ class PrometheusFormatter(BaseFormatter):
         lines.append("")
         return "\n".join(lines)
 
-    def _render_fixedaddress(self, rec: dict, lines: list[str], seen_metrics: set[str]) -> None:
+    def _render_fixedaddress(self, rec: dict, lines: list[str], seen_metrics: set[str], shared: bool = False) -> None:
         def _clean(v):
             return _sanitize_label((v or "").replace("\n", " "))
 
@@ -95,4 +118,6 @@ class PrometheusFormatter(BaseFormatter):
             f'network_view="{_clean(rec.get("network_view"))}",'
             f'comment="{_clean(rec.get("comment"))}"'
         )
+        if shared:
+            lbl += ',shared="true"'
         lines.append(f"ibx_fixedaddress{{{lbl}}} 1")

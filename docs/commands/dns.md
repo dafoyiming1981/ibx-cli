@@ -163,3 +163,30 @@ List all DNS records in a zone. **`--zone` is required.**
 ibx dns all-records --zone "example.com"
 ibx dns all-records --zone "example.com" --type "SRV"
 ```
+
+## `ibx dns zone-records`
+
+Count DNS records per type in one or more zones, for Grafana/Prometheus dashboards. **`--zone` is required.**
+
+| Option | Description |
+|--------|-------------|
+| `--zone` | Zone FQDN (repeatable, **required**) |
+| `--view` | DNS view filter |
+| `--format` | Output format: `prometheus` (default), `table`, `json`, `csv` |
+| `--output` | Write output to file instead of stdout |
+| `--shared` | Add `shared="true"` label to all metrics (for sharing dashboards across Grafana orgs) |
+
+```bash
+ibx dns zone-records --zone example.com
+ibx dns zone-records --zone example.com --zone lab.com --output /var/lib/node_exporter/ibx_dns_records.prom
+ibx dns zone-records --zone example.com --shared --output /var/lib/node_exporter/ibx_dns_records.prom
+```
+
+### Prometheus Output
+
+```
+# HELP ibx_dns_records_count Number of DNS records in the zone
+# TYPE ibx_dns_records_count gauge
+ibx_dns_records_count{zone="example.com",view="default",type="A"} 150
+ibx_dns_records_count{zone="example.com",view="default",type="CNAME"} 30
+```

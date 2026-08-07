@@ -140,11 +140,13 @@ Export network utilization metrics for Grafana/Prometheus dashboards. Queries ne
 | `--format` | Output format: `prometheus` (default), `table`, `json`, `csv` |
 | `--output` | Write output to file instead of stdout |
 | `--limit` | Max networks to query (default: all) |
+| `--shared` | Add `shared="true"` label to all metrics (for sharing dashboards across Grafana orgs) |
 
 ```bash
 ibx dhcp utilization --vlan 100 --zone DC1
 ibx dhcp utilization --vlan 100 --vlan 200 --zone DC1 --zone DC2 --format prometheus
 ibx dhcp utilization --vlan 100 --zone DC1 --format prometheus --output /var/lib/node_exporter/ibx_utilization.prom
+ibx dhcp utilization --vlan 100 --zone DC1 --shared --output /var/lib/node_exporter/ibx_utilization.prom
 ```
 
 ### Prometheus Output

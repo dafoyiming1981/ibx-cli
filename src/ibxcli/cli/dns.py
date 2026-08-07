@@ -3,6 +3,7 @@
 import click
 
 from ibxcli.cli.main import execute_and_render, output_options
+from ibxcli.formatters.prometheus_fmt import render_dns_prometheus
 from ibxcli.objects import HANDLERS
 
 
@@ -162,8 +163,9 @@ def all_records(ctx, zone, view, record_type, **kwargs):
 @click.option("--view", help="DNS view filter")
 @click.option("--format", "output_format", type=click.Choice(["table", "json", "csv", "prometheus"]), default="prometheus", help="Output format")
 @click.option("--output", type=click.Path(), default=None, help="Write output to file")
+@click.option("--shared", is_flag=True, default=False, help='Add shared="true" label to Prometheus metrics (for sharing dashboards across Grafana orgs)')
 @click.pass_context
-def zone_records(ctx, zone, view, output_format, output):
+def zone_records(ctx, zone, view, output_format, output, shared):
     """Count DNS records per type in a zone for Prometheus metrics."""
     from pathlib import Path
 
@@ -198,21 +200,7 @@ def zone_records(ctx, zone, view, output_format, output):
         return
 
     if output_format == "prometheus":
-        lines = []
-        for rec in results:
-            label_set = f'zone="{rec["zone"]}"'
-            if rec["view"]:
-                label_set += f',view="{rec["view"]}"'
-            label_set += f',type="{rec["type"]}"'
-            lines.append(f'ibx_dns_records_count{{{label_set}}} {rec["count"]}')
-
-        rendered_lines = [
-            "# HELP ibx_dns_records_count Number of DNS records in the zone",
-            "# TYPE ibx_dns_records_count gauge",
-        ]
-        rendered_lines.extend(lines)
-        rendered_lines.append("")
-        rendered = "\n".join(rendered_lines)
+        rendered = render_dns_prometheus(results, shared=shared)
     else:
         from ibxcli.formatters.base import get_formatter
         formatter = get_formatter(output_format)

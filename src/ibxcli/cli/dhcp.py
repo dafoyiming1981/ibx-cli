@@ -365,8 +365,9 @@ def leases(ctx, network, network_view, **kwargs):
 @click.option("--format", "output_format", type=click.Choice(["table", "json", "csv", "prometheus"]), default="prometheus", help="Output format")
 @click.option("--output", type=click.Path(), default=None, help="Write output to file instead of stdout")
 @click.option("--limit", type=int, default=None, help="Max networks to query (default: all)")
+@click.option("--shared", is_flag=True, default=False, help='Add shared="true" label to Prometheus metrics (for sharing dashboards across Grafana orgs)')
 @click.pass_context
-def utilization(ctx, vlan, zone, site, output_format, output, limit):
+def utilization(ctx, vlan, zone, site, output_format, output, limit, shared):
     """Export network utilization for Grafana/Prometheus.
 
     Queries networks filtered by VLAN/Zone/Site, outputs utilization
@@ -403,7 +404,10 @@ def utilization(ctx, vlan, zone, site, output_format, output, limit):
         return
 
     formatter = get_formatter(output_format)
-    rendered = formatter.render(result.records, result.fields)
+    if output_format == "prometheus":
+        rendered = formatter.render(result.records, result.fields, shared=shared)
+    else:
+        rendered = formatter.render(result.records, result.fields)
 
     if output:
         Path(output).parent.mkdir(parents=True, exist_ok=True)
