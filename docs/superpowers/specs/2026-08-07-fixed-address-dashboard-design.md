@@ -30,6 +30,22 @@ PrometheusFormatter.render()  ──►  ibx_fixedaddress{...} 1  每 IP 一行
 
 数据采集通道复用现有 network utilization 的机制（node_exporter textfile collector，配置在项目外）。
 
+### 采集命令与 textfile 命名
+
+注意：`fixed_addresses` 命令不支持 `--output` 参数（仅 `utilization` 有），需用 shell 重定向写入 textfile：
+
+```bash
+ibx dhcp fixed-addresses --format prometheus > /var/lib/node_exporter/ibx_fixedaddress.prom
+```
+
+cron 示例（每天 3 点采集一次）：
+
+```bash
+0 3 * * * ibx dhcp fixed-addresses --format prometheus > /var/lib/node_exporter/ibx_fixedaddress.prom
+```
+
+`.prom` 文件名遵循现有 `ibx_utilization.prom` 的 `ibx_<对象>.prom` 命名风格。
+
 ## 组件改动
 
 ### 1. `src/ibxcli/formatters/prometheus_fmt.py`
