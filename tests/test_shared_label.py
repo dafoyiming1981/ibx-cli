@@ -126,6 +126,14 @@ def test_utilization_cli_without_shared_flag(patched_client):
     assert "shared" not in result.output
 
 
+def test_fixed_addresses_cli_shared_flag(patched_client):
+    result = _invoke_with_records(
+        ["dhcp", "fixed-addresses", "--format", "prometheus", "--shared"],
+        _sample_fixedaddr_records())
+    assert result.exit_code == 0, result.output
+    assert 'shared="true"' in result.output
+
+
 def test_zone_records_cli_shared_flag(patched_client):
     records = [
         {"name": "www.example.com", "type": "A", "address": "10.0.0.1",

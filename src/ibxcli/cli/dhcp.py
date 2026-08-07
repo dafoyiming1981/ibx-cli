@@ -232,6 +232,7 @@ def containers(ctx, network, network_view, **kwargs):
 @click.option("--ipv4addr", help="IPv4 address filter")
 @click.option("--mac", help="MAC address filter")
 @click.option("--network-view", help="Network view filter")
+@click.option("--shared", is_flag=True, default=False, help='Add shared="true" label to Prometheus metrics (for sharing dashboards across Grafana orgs)')
 @click.pass_context
 def fixed_addresses(ctx, ipv4addr, mac, network_view, **kwargs):
     """List DHCP fixed addresses (reservations)."""

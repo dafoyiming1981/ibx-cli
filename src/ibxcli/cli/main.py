@@ -72,7 +72,10 @@ def execute_and_render(ctx, obj_type, search_filters, **kwargs):
         return
 
     formatter = get_formatter(fmt)
-    rendered = formatter.render(result.records, result.fields)
+    if fmt == "prometheus":
+        rendered = formatter.render(result.records, result.fields, shared=bool(ctx.params.get("shared")))
+    else:
+        rendered = formatter.render(result.records, result.fields)
 
     output = ctx.params.get("output")
     if output:
