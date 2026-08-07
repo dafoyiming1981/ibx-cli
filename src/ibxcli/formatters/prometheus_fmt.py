@@ -34,6 +34,11 @@ class PrometheusFormatter(BaseFormatter):
         seen_metrics: set[str] = set()
 
         for rec in records:
+            # fixedaddress 记录：无 utilization 字段
+            if "utilization" not in rec:
+                self._render_fixedaddress(rec, lines, seen_metrics)
+                continue
+
             network = rec.get("network", "")
             utilization = rec.get("utilization", 0)
             vlan = rec.get("VLAN", "")
@@ -72,3 +77,22 @@ class PrometheusFormatter(BaseFormatter):
 
         lines.append("")
         return "\n".join(lines)
+
+    def _render_fixedaddress(self, rec: dict, lines: list[str], seen_metrics: set[str]) -> None:
+        def _clean(v):
+            return _sanitize_label((v or "").replace("\n", " "))
+
+        if "ibx_fixedaddress" not in seen_metrics:
+            lines.append("# HELP ibx_fixedaddress Fixed IP address reservations")
+            lines.append("# TYPE ibx_fixedaddress gauge")
+            seen_metrics.add("ibx_fixedaddress")
+
+        lbl = (
+            f'addr="{_clean(rec.get("ipv4addr"))}",'
+            f'mac="{_clean(rec.get("mac"))}",'
+            f'name="{_clean(rec.get("name"))}",'
+            f'network="{_clean(rec.get("network"))}",'
+            f'network_view="{_clean(rec.get("network_view"))}",'
+            f'comment="{_clean(rec.get("comment"))}"'
+        )
+        lines.append(f"ibx_fixedaddress{{{lbl}}} 1")
