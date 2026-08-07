@@ -32,16 +32,16 @@ PrometheusFormatter.render()  ──►  ibx_fixedaddress{...} 1  每 IP 一行
 
 ### 采集命令与 textfile 命名
 
-注意：`fixed_addresses` 命令不支持 `--output` 参数（仅 `utilization` 有），需用 shell 重定向写入 textfile：
+`--output` 参数已加入通用 `@output_options`，所有查询命令（含 `fixed-addresses`）都支持直接写文件：
 
 ```bash
-ibx dhcp fixed-addresses --format prometheus > /var/lib/node_exporter/ibx_fixedaddress.prom
+ibx dhcp fixed-addresses --format prometheus --output /var/lib/node_exporter/ibx_fixedaddress.prom
 ```
 
 cron 示例（每天 3 点采集一次）：
 
 ```bash
-0 3 * * * ibx dhcp fixed-addresses --format prometheus > /var/lib/node_exporter/ibx_fixedaddress.prom
+0 3 * * * ibx dhcp fixed-addresses --format prometheus --output /var/lib/node_exporter/ibx_fixedaddress.prom
 ```
 
 `.prom` 文件名遵循现有 `ibx_utilization.prom` 的 `ibx_<对象>.prom` 命名风格。

@@ -25,6 +25,7 @@ def output_options(f):
     f = click.option("--fields", help="Comma-separated fields to display")(f)
     f = click.option("--limit", type=int, default=None, help="Max rows to display (default: all)")(f)
     f = click.option("--sort", help="Sort results by field")(f)
+    f = click.option("--output", type=click.Path(), default=None, help="Write output to file instead of stdout")(f)
     return f
 
 
@@ -71,7 +72,16 @@ def execute_and_render(ctx, obj_type, search_filters, **kwargs):
         return
 
     formatter = get_formatter(fmt)
-    console.print(formatter.render(result.records, result.fields), soft_wrap=True)
+    rendered = formatter.render(result.records, result.fields)
+
+    output = ctx.params.get("output")
+    if output:
+        from pathlib import Path
+        Path(output).parent.mkdir(parents=True, exist_ok=True)
+        Path(output).write_text(rendered)
+        console.print(f"[green]Written {len(result.records)} records to {output}[/green]")
+    else:
+        console.print(rendered, soft_wrap=True)
 
 
 def _resolve_config(ctx: click.Context):
