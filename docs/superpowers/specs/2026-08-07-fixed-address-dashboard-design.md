@@ -19,7 +19,7 @@
 ## 架构
 
 ```
-ibx dhcp fixed_addresses --format prometheus
+ibx dhcp fixed-addresses --format prometheus
         │  (新增 fixedaddress 分支)
         ▼
 PrometheusFormatter.render()  ──►  ibx_fixedaddress{...} 1  每 IP 一行
