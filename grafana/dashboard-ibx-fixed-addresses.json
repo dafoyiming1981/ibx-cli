@@ -1,0 +1,95 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Fixed IP Addresses",
+      "type": "table",
+      "gridPos": {
+        "h": 14,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus"
+          },
+          "expr": "ibx_fixedaddress",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "instance": true,
+              "Value": true
+            },
+            "renameByName": {
+              "addr": "IP Address",
+              "mac": "MAC",
+              "name": "Name",
+              "network": "Network",
+              "network_view": "View",
+              "comment": "Comment"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["infoblox", "dhcp", "fixed-address"],
+  "templating": {
+    "list": [
+      {
+        "name": "network_view",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus"
+        },
+        "query": "label_values(ibx_fixedaddress, network_view)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "label": "View"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Infoblox Fixed IP Addresses",
+  "uid": "ibx-fixed-addresses",
+  "version": 1
+}
