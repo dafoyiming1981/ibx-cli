@@ -165,8 +165,13 @@ ibx_network_used_ips{network="10.0.0.0/24",vlan="100",zone="DC1"} 185
 `ibx_network_next_available_ip` is an info metric (value always `1`); the IP
 addresses are carried in the `ip1`/`ip2`/`ip3` labels. When a network is 100%
 utilized (or has fewer than 3 IPs left), the remaining positions show
-`No available IP`. In Grafana, query it with **Instant** + **Format as Table**
-and join with `ibx_network_utilization_percent` on the `network` label.
+`No available IP`. In Grafana, merge it into the utilization table with a
+single PromQL query (standard info-metric join, **Instant** + **Format as Table**):
+
+```promql
+ibx_network_utilization_percent * on(network) group_left(ip1, ip2, ip3) ibx_network_next_available_ip
+  or ibx_network_utilization_percent
+```
 
 ### Cron Usage
 
