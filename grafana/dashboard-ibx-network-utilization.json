@@ -15,7 +15,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus" },
-          "expr": "count(ibx_network_utilization_percent{zone=~\"$zone\", vlan=~\"$vlan\", site=~\"$site\"})",
+          "expr": "count(ibx_network_utilization_percent{zone=~\"$zone\", vlan=~\"$vlan\", site=~\"$site\", network=~\"$network\"})",
           "legendFormat": "Networks",
           "instant": true
         }
@@ -35,7 +35,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus" },
-          "expr": "avg(ibx_network_utilization_percent{zone=~\"$zone\", vlan=~\"$vlan\", site=~\"$site\"})",
+          "expr": "avg(ibx_network_utilization_percent{zone=~\"$zone\", vlan=~\"$vlan\", site=~\"$site\", network=~\"$network\"})",
           "legendFormat": "Avg %",
           "instant": true
         }
@@ -63,7 +63,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus" },
-          "expr": "count(ibx_network_utilization_percent{zone=~\"$zone\", vlan=~\"$vlan\", site=~\"$site\"} > 80)",
+          "expr": "count(ibx_network_utilization_percent{zone=~\"$zone\", vlan=~\"$vlan\", site=~\"$site\", network=~\"$network\"} > 80)",
           "legendFormat": "Count",
           "instant": true
         }
@@ -90,7 +90,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus" },
-          "expr": "sum(ibx_network_used_ips{zone=~\"$zone\", vlan=~\"$vlan\", site=~\"$site\"})",
+          "expr": "sum(ibx_network_used_ips{zone=~\"$zone\", vlan=~\"$vlan\", site=~\"$site\", network=~\"$network\"})",
           "legendFormat": "IPs",
           "instant": true
         }
@@ -110,7 +110,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus" },
-          "expr": "ibx_network_utilization_percent{zone=~\"$zone\", vlan=~\"$vlan\", site=~\"$site\"} * on(network) group_left(ip1, ip2, ip3) ibx_network_next_available_ip or (ibx_network_utilization_percent{zone=~\"$zone\", vlan=~\"$vlan\", site=~\"$site\"} unless on(network) ibx_network_next_available_ip)",
+          "expr": "ibx_network_utilization_percent{zone=~\"$zone\", vlan=~\"$vlan\", site=~\"$site\", network=~\"$network\"} * on(network, __tenant_id, prom_id) group_left(ip1, ip2, ip3) ibx_network_next_available_ip or (ibx_network_utilization_percent{zone=~\"$zone\", vlan=~\"$vlan\", site=~\"$site\", network=~\"$network\"} unless on(network, __tenant_id, prom_id) ibx_network_next_available_ip)",
           "instant": true,
           "format": "table"
         }
@@ -157,7 +157,7 @@
         {
           "id": "organize",
           "options": {
-            "excludeByName": { "Time": true, "__name__": true, "job": true, "instance": true, "shared": true },
+            "excludeByName": { "Time": true, "__name__": true, "job": true, "instance": true, "shared": true, "__tenant_id": true, "prom_id": true },
             "renameByName": {
               "network": "Network CIDR",
               "vlan": "VLAN",
@@ -177,13 +177,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus" },
-          "expr": "ibx_network_used_ips{zone=~\"$zone\", vlan=~\"$vlan\", site=~\"$site\"}",
+          "expr": "ibx_network_used_ips{zone=~\"$zone\", vlan=~\"$vlan\", site=~\"$site\", network=~\"$network\"}",
           "instant": true,
           "format": "table"
         },
         {
           "datasource": { "type": "prometheus" },
-          "expr": "ibx_network_total_ips{zone=~\"$zone\", vlan=~\"$vlan\", site=~\"$site\"}",
+          "expr": "ibx_network_total_ips{zone=~\"$zone\", vlan=~\"$vlan\", site=~\"$site\", network=~\"$network\"}",
           "instant": true,
           "format": "table",
           "refId": "B"
@@ -219,7 +219,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus" },
-          "expr": "ibx_network_utilization_percent{zone=~\"$zone\", vlan=~\"$vlan\", site=~\"$site\"}",
+          "expr": "ibx_network_utilization_percent{zone=~\"$zone\", vlan=~\"$vlan\", site=~\"$site\", network=~\"$network\"}",
           "legendFormat": "{{network}} VLAN={{vlan}}",
           "instant": false
         }
@@ -247,7 +247,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus" },
-          "expr": "avg by (zone) (ibx_network_utilization_percent{zone=~\"$zone\", vlan=~\"$vlan\", site=~\"$site\"})",
+          "expr": "avg by (zone) (ibx_network_utilization_percent{zone=~\"$zone\", vlan=~\"$vlan\", site=~\"$site\", network=~\"$network\"})",
           "legendFormat": "{{zone}}",
           "instant": true
         }
@@ -275,7 +275,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus" },
-          "expr": "ibx_network_utilization_percent{zone=~\"$zone\", vlan=~\"$vlan\", site=~\"$site\"}",
+          "expr": "ibx_network_utilization_percent{zone=~\"$zone\", vlan=~\"$vlan\", site=~\"$site\", network=~\"$network\"}",
           "legendFormat": "All Networks",
           "instant": true
         }
@@ -328,6 +328,16 @@
         "multi": true,
         "includeAll": true,
         "label": "Site"
+      },
+      {
+        "name": "network",
+        "type": "query",
+        "datasource": { "type": "prometheus" },
+        "query": "label_values(ibx_network_utilization_percent, network)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "label": "Network"
       }
     ]
   },
