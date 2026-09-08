@@ -1,8 +1,10 @@
 """Tests for next-3-available-IP resolution and Prometheus info metric.
 
 Covers:
-1. QueryExecutor: next_available_ip called with num=3, list field padded
-   with "No available IP", singular field = first IP, _ref stripped,
+1. QueryExecutor: next_available_ip degradation chain num=3 → 2 → 1
+   (real WAPI is all-or-nothing: it errors when it cannot return `num`
+   contiguous free IPs, never partial results), list field padded with
+   "No available IP", singular field = first IP, _ref stripped,
    refs stay aligned after sort/limit.
 2. PrometheusFormatter: ibx_network_next_available_ip info metric with
    ip1/ip2/ip3 labels, --shared support, backward compatibility.
@@ -36,15 +38,23 @@ def _fake_network(cidr: str, util: int, vlan: str = "100") -> dict:
 
 
 def _executor_with_ips(mock_client, records, ips_by_ref):
-    """Configure mock: get() returns records, call_func() returns IPs per ref."""
+    """Configure mock: get() returns records, call_func() models real WAPI.
+
+    Real WAPI next_available_ip is all-or-nothing: requesting num IPs from a
+    network with fewer than num free IPs raises an error (no partial results).
+    ips_by_ref maps ref → list of ALL free IPs for that network.
+    """
     mock_client.get.return_value = records
 
     def fake_call_func(func_name, ref, payload=None):
         assert func_name == "next_available_ip"
-        assert payload == {"num": 3}, f"expected num=3, got {payload}"
-        if ref not in ips_by_ref:
-            raise Exception("Network has no available IPs")
-        return {"ips": [{"ip": ip} for ip in ips_by_ref[ref]]}
+        num = (payload or {}).get("num")
+        assert num in (1, 2, 3), f"unexpected payload {payload}"
+        available = ips_by_ref.get(ref, [])
+        if len(available) < num:
+            raise Exception(
+                f"Network has no available IPs (need {num}, have {len(available)})")
+        return {"ips": [{"ip": ip} for ip in available[:num]]}
 
     mock_client.call_func.side_effect = fake_call_func
     return QueryExecutor(mock_client)
@@ -70,6 +80,7 @@ def mock_client():
 
 
 def test_num_3_requested_and_list_populated(mock_client):
+    """num=3 succeeds outright → exactly one WAPI call (no perf regression)."""
     records = [_fake_network("10.0.0.0/24", 500)]
     executor = _executor_with_ips(mock_client, records, {
         "network/10.0.0.0/24/default": ["10.0.0.57", "10.0.0.58", "10.0.0.59"],
@@ -79,37 +90,65 @@ def test_num_3_requested_and_list_populated(mock_client):
     assert rec["next_available_ips"] == ["10.0.0.57", "10.0.0.58", "10.0.0.59"]
     assert rec["next_available_ipv4address"] == "10.0.0.57"
     assert "_ref" not in rec
+    assert mock_client.call_func.call_count == 1
+    assert mock_client.call_func.call_args_list[0].kwargs["payload"] == {"num": 3}
 
 
-def test_partial_availability_padded(mock_client):
-    """WAPI returns fewer than 3 IPs → pad with 'No available IP'."""
+def test_degrade_to_num2_when_num3_fails(mock_client):
+    """/29 with only 2 free IPs: num=3 errors → retry num=2 succeeds → pad 3rd.
+
+    Regression test for the bug where such networks showed 'No available IP'
+    in all three positions.
+    """
+    records = [_fake_network("10.0.0.248/29", 750)]
+    executor = _executor_with_ips(mock_client, records, {
+        "network/10.0.0.248/29/default": ["10.0.0.253", "10.0.0.254"],
+    })
+    result = _run(executor)
+    rec = result.records[0]
+    assert rec["next_available_ips"] == [
+        "10.0.0.253", "10.0.0.254", "No available IP"]
+    assert rec["next_available_ipv4address"] == "10.0.0.253"
+    assert mock_client.call_func.call_count == 2
+    assert [c.kwargs["payload"]["num"]
+            for c in mock_client.call_func.call_args_list] == [3, 2]
+
+
+def test_degrade_to_num1_when_num3_and_num2_fail(mock_client):
+    """Only 1 free IP (or non-contiguous frees): num=3, 2 error → num=1 succeeds."""
     records = [_fake_network("10.0.0.0/24", 990)]
     executor = _executor_with_ips(mock_client, records, {
         "network/10.0.0.0/24/default": ["10.0.0.254"],
     })
     result = _run(executor)
-    assert result.records[0]["next_available_ips"] == [
+    rec = result.records[0]
+    assert rec["next_available_ips"] == [
         "10.0.0.254", "No available IP", "No available IP"]
-    assert result.records[0]["next_available_ipv4address"] == "10.0.0.254"
+    assert rec["next_available_ipv4address"] == "10.0.0.254"
+    assert mock_client.call_func.call_count == 3
+    assert [c.kwargs["payload"]["num"]
+            for c in mock_client.call_func.call_args_list] == [3, 2, 1]
 
 
 def test_full_network_all_no_available_ip(mock_client):
-    """100% utilized → WAPI errors → all three positions 'No available IP'."""
+    """100% utilized → num=3/2/1 all error → all positions 'No available IP'."""
     records = [_fake_network("10.0.0.0/24", 1000)]
     executor = _executor_with_ips(mock_client, records, {})  # ref missing → raises
     result = _run(executor)
     assert result.records[0]["next_available_ips"] == ["No available IP"] * 3
     assert result.records[0]["next_available_ipv4address"] == "No available IP"
+    assert mock_client.call_func.call_count == 3
 
 
 def test_limit_no_index_error_and_calls_capped(mock_client):
     """--limit smaller than record count must not crash; only limited refs resolved."""
     records = [_fake_network(f"10.0.{i}.0/24", 500) for i in range(5)]
-    ips = {f"network/10.0.{i}.0/24/default": [f"10.0.{i}.10"] for i in range(5)}
+    ips = {f"network/10.0.{i}.0/24/default":
+           [f"10.0.{i}.10", f"10.0.{i}.11", f"10.0.{i}.12"] for i in range(5)}
     executor = _executor_with_ips(mock_client, records, ips)
     result = _run(executor, limit=2)
     assert len(result.records) == 2
-    assert mock_client.call_func.call_count == 2
+    assert mock_client.call_func.call_count == 2  # one call per limited record
 
 
 def test_sort_keeps_ips_aligned(mock_client):

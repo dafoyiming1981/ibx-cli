@@ -1864,18 +1864,26 @@ class QueryExecutor:
                 ref = record.pop("_ref", None)
                 ips: list[str] = []
                 if ref:
-                    try:
-                        result = self._client.call_func(
-                            "next_available_ip", ref, payload={"num": 3}
-                        )
+                    # WAPI next_available_ip is all-or-nothing: it errors when
+                    # it cannot find `num` contiguous free IPs (no partial
+                    # results). Degrade 3 → 2 → 1 so networks with only 1-2
+                    # free IPs still report them; only if all attempts fail
+                    # is the network truly full. Healthy networks still cost
+                    # a single WAPI call.
+                    for num in (3, 2, 1):
+                        try:
+                            result = self._client.call_func(
+                                "next_available_ip", ref, payload={"num": num}
+                            )
+                        except Exception:
+                            continue
                         if isinstance(result, dict) and result.get("ips"):
                             for item in result["ips"]:
                                 ip_val = item.get("ip", "") if isinstance(item, dict) else str(item)
                                 if ip_val:
                                     ips.append(ip_val)
-                    except Exception:
-                        # WAPI returns error when no IPs available — treat as "No available IP"
-                        ips = []
+                        if ips:
+                            break
                 # Pad missing positions so ip1/ip2/ip3 labels always exist
                 while len(ips) < 3:
                     ips.append("No available IP")
