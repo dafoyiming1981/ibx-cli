@@ -155,9 +155,18 @@ ibx dhcp utilization --vlan 100 --zone DC1 --shared --output /var/lib/node_expor
 # HELP ibx_network_utilization_percent Network utilization percentage (0-100)
 # TYPE ibx_network_utilization_percent gauge
 ibx_network_utilization_percent{network="10.0.0.0/24",vlan="100",zone="DC1"} 73
+# HELP ibx_network_next_available_ip Next 3 available IP addresses in the network
+# TYPE ibx_network_next_available_ip gauge
+ibx_network_next_available_ip{network="10.0.0.0/24",vlan="100",zone="DC1",ip1="10.0.0.57",ip2="10.0.0.58",ip3="10.0.0.59"} 1
 ibx_network_total_ips{network="10.0.0.0/24",vlan="100",zone="DC1"} 254
 ibx_network_used_ips{network="10.0.0.0/24",vlan="100",zone="DC1"} 185
 ```
+
+`ibx_network_next_available_ip` is an info metric (value always `1`); the IP
+addresses are carried in the `ip1`/`ip2`/`ip3` labels. When a network is 100%
+utilized (or has fewer than 3 IPs left), the remaining positions show
+`No available IP`. In Grafana, query it with **Instant** + **Format as Table**
+and join with `ibx_network_utilization_percent` on the `network` label.
 
 ### Cron Usage
 
