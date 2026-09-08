@@ -78,6 +78,21 @@ class PrometheusFormatter(BaseFormatter):
                 seen_metrics.add("ibx_network_utilization_percent")
             lines.append(f"ibx_network_utilization_percent{lbl} {utilization_pct}")
 
+            # Next 3 available IPs as info metric (IP values carried in labels).
+            # Members label intentionally omitted to reduce series churn.
+            next_ips = rec.get("next_available_ips")
+            if isinstance(next_ips, list) and next_ips:
+                if "ibx_network_next_available_ip" not in seen_metrics:
+                    lines.append("# HELP ibx_network_next_available_ip Next 3 available IP addresses in the network")
+                    lines.append("# TYPE ibx_network_next_available_ip gauge")
+                    seen_metrics.add("ibx_network_next_available_ip")
+                ip_labels = ",".join(
+                    f'ip{i + 1}="{_sanitize_label(str(v))}"'
+                    for i, v in enumerate(next_ips[:3])
+                )
+                base_lbl = _label_set(network, vlan, zone, site, shared=shared)
+                lines.append(f"ibx_network_next_available_ip{base_lbl[:-1]},{ip_labels}}} 1")
+
             cidr_parts = network.split("/")
             if len(cidr_parts) == 2:
                 try:

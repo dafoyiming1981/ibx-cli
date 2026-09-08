@@ -139,10 +139,8 @@ class QueryExecutor:
                 return_fields=api_fields or None,
             )
 
-        # Preserve _ref for network objects before stripping (needed for nextavailableip)
-        net_refs = []
-        if params.obj_type in ("network", "ipv6network"):
-            net_refs = [r.get("_ref", "") for r in records]
+        # Preserve _ref on network objects until after sort/limit (needed for nextavailableip)
+        keep_ref = params.obj_type in ("network", "ipv6network")
 
         # Post-process: extract extensible attributes, remove _ref and extattrs
         for record in records:
@@ -153,7 +151,8 @@ class QueryExecutor:
                         record[ea_key] = extattrs[ea_key].get("value", "")
                     else:
                         record[ea_key] = ""
-            record.pop("_ref", None)
+            if not keep_ref:
+                record.pop("_ref", None)
             # Flatten ipv4addrs: [{"_ref": "...", "ipv4addr": "10.0.0.1", ...}] → ["10.0.0.1"]
             ipv4addrs = record.get("ipv4addrs")
             if isinstance(ipv4addrs, list) and ipv4addrs and isinstance(ipv4addrs[0], dict):
@@ -231,24 +230,31 @@ class QueryExecutor:
         if params.limit and len(records) > params.limit:
             records = records[:params.limit]
 
-        # Resolve next available IP for network objects
-        if params.obj_type in ("network", "ipv6network"):
+        # Resolve next 3 available IPs for network objects (after sort/limit so
+        # refs stay aligned with the final record list)
+        if keep_ref:
             ip_field = "next_available_ipv4address" if params.obj_type == "network" else "next_available_ipv6address"
-            for idx, ref in enumerate(net_refs):
+            for record in records:
+                ref = record.pop("_ref", None)
+                ips: list[str] = []
                 if ref:
                     try:
                         result = self._client.call_func(
-                            "next_available_ip", ref, payload={"num": 1}
+                            "next_available_ip", ref, payload={"num": 3}
                         )
-                        if isinstance(result, dict) and "ips" in result and result["ips"]:
-                            first = result["ips"][0]
-                            ip_val = first.get("ip", "") if isinstance(first, dict) else str(first)
-                            records[idx][ip_field] = ip_val
-                        else:
-                            records[idx][ip_field] = "No available IP"
+                        if isinstance(result, dict) and result.get("ips"):
+                            for item in result["ips"]:
+                                ip_val = item.get("ip", "") if isinstance(item, dict) else str(item)
+                                if ip_val:
+                                    ips.append(ip_val)
                     except Exception:
                         # WAPI returns error when no IPs available — treat as "No available IP"
-                        records[idx][ip_field] = "No available IP"
+                        ips = []
+                # Pad missing positions so ip1/ip2/ip3 labels always exist
+                while len(ips) < 3:
+                    ips.append("No available IP")
+                record["next_available_ips"] = ips
+                record[ip_field] = ips[0]
 
         # Build display fields from handler defaults, removing _ref
         if params.return_fields:
