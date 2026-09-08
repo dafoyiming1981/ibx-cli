@@ -170,8 +170,13 @@ single PromQL query (standard info-metric join, **Instant** + **Format as Table*
 
 ```promql
 ibx_network_utilization_percent * on(network) group_left(ip1, ip2, ip3) ibx_network_next_available_ip
-  or ibx_network_utilization_percent
+  or (ibx_network_utilization_percent unless on(network) ibx_network_next_available_ip)
 ```
+
+The `unless on(network)` fallback adds utilization rows only for networks
+missing from the info metric (e.g. before the exporter upgrades); a plain
+`or ibx_network_utilization_percent` would duplicate every row, because
+`or` deduplicates on the full label set, not on `network`.
 
 ### Cron Usage
 
