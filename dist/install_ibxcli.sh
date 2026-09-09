@@ -1743,7 +1743,7 @@ class QueryExecutor:
         search = dict(params.search_filters)
 
         # Build API return_fields: strip pseudo-fields that require post-processing
-        extattr_fields = {"EONID", "VLAN", "L2", "Zone", "Site"}
+        extattr_fields = {"EONID", "VLAN", "L2", "Zone", "Site", "Auto-Provision"}
         has_extattrs = [f for f in (params.return_fields or []) if f in extattr_fields]
         pseudo_fields = {"member_assignment", "next_available_ipv4address", "next_available_ipv6address"}
         api_fields = [f for f in params.return_fields if f not in extattr_fields and f not in pseudo_fields] if params.return_fields else []
@@ -2183,7 +2183,12 @@ def render_dns_prometheus(results: list[dict], shared: bool = False) -> str:
     return "\n".join(rendered_lines)
 
 
-def _label_set(network: str, vlan: str = "", zone: str = "", site: str = "", members: str = "", shared: bool = False) -> str:
+def _bool_label(value) -> str:
+    """Normalize WAPI EA boolean-ish values to Prometheus label 'true'/'false'."""
+    return "true" if str(value or "").strip().lower() in ("true", "yes", "1") else "false"
+
+
+def _label_set(network: str, vlan: str = "", zone: str = "", site: str = "", members: str = "", shared: bool = False, extra: list[str] | None = None) -> str:
     """Build Prometheus label set string."""
     net = f'network="{_sanitize_label(network)}"'
     parts = [net]
@@ -2195,6 +2200,8 @@ def _label_set(network: str, vlan: str = "", zone: str = "", site: str = "", mem
         parts.append(f'site="{_sanitize_label(site)}"')
     if members:
         parts.append(f'members="{_sanitize_label(members)}"')
+    if extra:
+        parts.extend(extra)
     if shared:
         parts.append('shared="true"')
     return "{" + ",".join(parts) + "}"
@@ -2222,13 +2229,23 @@ class PrometheusFormatter(BaseFormatter):
             members = rec.get("members", "")
 
             lbl = _label_set(network, vlan, zone, site, members, shared=shared)
+            # Utilization metric carries extra EA labels (Auto-Provision, L2, comment).
+            # Kept off total/used/next_ip metrics to limit series churn.
+            util_lbl = _label_set(
+                network, vlan, zone, site, members, shared=shared,
+                extra=[
+                    f'auto_provision="{_bool_label(rec.get("Auto-Provision"))}"',
+                    f'l2="{_bool_label(rec.get("L2"))}"',
+                    f'comment="{_sanitize_label((rec.get("comment") or "").replace(chr(10), " "))}"',
+                ],
+            )
             utilization_pct = round(utilization / 10, 1)
 
             if "ibx_network_utilization_percent" not in seen_metrics:
                 lines.append("# HELP ibx_network_utilization_percent Network utilization percentage (0-100)")
                 lines.append("# TYPE ibx_network_utilization_percent gauge")
                 seen_metrics.add("ibx_network_utilization_percent")
-            lines.append(f"ibx_network_utilization_percent{lbl} {utilization_pct}")
+            lines.append(f"ibx_network_utilization_percent{util_lbl} {utilization_pct}")
 
             # Next 3 available IPs as info metric (IP values carried in labels).
             # Members label intentionally omitted to reduce series churn.
@@ -2415,7 +2432,7 @@ from ibxcli.objects.base import ObjectHandler
 class NetworkHandler(ObjectHandler):
     obj_type = "network"
     display_name = "IPv4 Networks"
-    default_return_fields = ["network", "utilization", "next_available_ipv4address", "members", "VLAN", "L2", "Zone", "Site", "comment"]
+    default_return_fields = ["network", "utilization", "next_available_ipv4address", "members", "VLAN", "L2", "Auto-Provision", "Zone", "Site", "comment"]
 
     def build_search_filters(self, network=None, network_view=None, vlan=None, zone=None, site=None):
         filters = {}

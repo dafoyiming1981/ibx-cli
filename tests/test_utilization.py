@@ -61,7 +61,53 @@ def test_prometheus_formatter_per_mille_to_percent():
     fmt = get_formatter("prometheus")
     records = [{"network": "10.0.0.0/25", "utilization": 920, "VLAN": "", "Zone": "", "Site": "", "members": ""}]
     output = fmt.render(records, None)
-    assert "ibx_network_utilization_percent{network=\"10.0.0.0/25\"} 92.0" in output
+    util_line = [l for l in output.split("\n") if l.startswith("ibx_network_utilization_percent")][0]
+    assert util_line.endswith("} 92.0")
+    assert 'network="10.0.0.0/25"' in util_line
     assert "ibx_network_total_ips{network=\"10.0.0.0/25\"} 126" in output
     used_line = [l for l in output.split("\n") if "ibx_network_used_ips" in l and "10.0.0.0/25" in l][0]
     assert "116" in used_line
+
+
+# ── Network EA labels: Auto-Provision / L2 / comment ──────────────
+
+def test_network_ea_labels_on_utilization_metric():
+    """Auto-Provision and L2 booleans normalize to true/false; comment is sanitized."""
+    fmt = get_formatter("prometheus")
+    records = [{
+        "network": "10.0.0.0/24", "utilization": 500,
+        "VLAN": "100", "Zone": "DC1", "Site": "BJ1", "members": "gm01",
+        "Auto-Provision": "True", "L2": "False", "comment": 'uplink "A"\nsecond line',
+    }]
+    output = fmt.render(records, None)
+    util_line = [l for l in output.split("\n") if l.startswith("ibx_network_utilization_percent")][0]
+    assert 'auto_provision="true"' in util_line
+    assert 'l2="false"' in util_line
+    assert 'comment="uplink \\"A\\" second line"' in util_line
+
+
+def test_network_ea_labels_default_false_when_missing():
+    """Records without the EAs still emit auto_provision/l2 as false and empty comment."""
+    fmt = get_formatter("prometheus")
+    records = [{"network": "10.0.0.0/24", "utilization": 500, "VLAN": "", "Zone": "", "Site": "", "members": ""}]
+    output = fmt.render(records, None)
+    util_line = [l for l in output.split("\n") if l.startswith("ibx_network_utilization_percent")][0]
+    assert 'auto_provision="false"' in util_line
+    assert 'l2="false"' in util_line
+    assert 'comment=""' in util_line
+
+
+def test_network_ea_labels_only_on_utilization_metric():
+    """total_ips / used_ips / next_available_ip must NOT carry the new labels (avoid series churn)."""
+    fmt = get_formatter("prometheus")
+    records = [{
+        "network": "10.0.0.0/24", "utilization": 500,
+        "VLAN": "", "Zone": "", "Site": "", "members": "",
+        "Auto-Provision": "True", "L2": "True", "comment": "test",
+        "next_available_ips": ["10.0.0.5", "10.0.0.6", "10.0.0.7"],
+    }]
+    output = fmt.render(records, None)
+    for line in output.split("\n"):
+        if line.startswith(("ibx_network_total_ips", "ibx_network_used_ips", "ibx_network_next_available_ip")):
+            assert "auto_provision" not in line, f"unexpected label in: {line}"
+            assert "comment" not in line, f"unexpected label in: {line}"
